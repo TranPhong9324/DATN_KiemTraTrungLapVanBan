@@ -1,0 +1,10 @@
+{"id":"q01","split":"validation","text":"Làm sao đọc chữ từ bản PDF scan chỉ có hình ảnh?","relevant_ids":["c02"]}
+{"id":"q02","split":"validation","text":"Dùng cơ sở dữ liệu nào để lưu tài liệu, đoạn văn và các lần đối chiếu?","relevant_ids":["c06"]}
+{"id":"q03","split":"validation","text":"Mô hình nào chuyển ý nghĩa câu thành embedding 768 chiều?","relevant_ids":["c04"]}
+{"id":"q04","split":"validation","text":"Cần những chỉ số nào để đánh giá rồi chọn mức cảnh báo?","relevant_ids":["c08"]}
+{"id":"q05","split":"validation","text":"Cách tìm nội dung chép gần nguyên câu bằng đặc trưng từ và cụm hai từ.","relevant_ids":["c11"]}
+{"id":"q06","split":"test","text":"Báo cáo phải được tách thành nhiều phần ngắn trước lúc sinh vector.","relevant_ids":["c03"]}
+{"id":"q07","split":"test","text":"Công cụ nào tìm kiếm lân cận gần nhất trên kho embedding theo cosine?","relevant_ids":["c05"]}
+{"id":"q08","split":"test","text":"Ai được quyền đưa một bài cũ vào tập tài liệu dùng để đối chiếu?","relevant_ids":["c07"]}
+{"id":"q09","split":"test","text":"Màn hình kết quả cần chỉ ra phần giống, số điểm và nguồn tham khảo.","relevant_ids":["c09"]}
+{"id":"q10","split":"test","text":"Dịch vụ web nhận yêu cầu kiểm tra và phản hồi JSON cho trình duyệt.","relevant_ids":["c12"]}

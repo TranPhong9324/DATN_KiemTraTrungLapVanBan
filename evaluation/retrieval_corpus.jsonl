@@ -1,0 +1,12 @@
+{"id":"c01","text":"Hệ thống nhận tệp PDF hoặc DOCX do người dùng tải lên và kiểm tra định dạng trước khi xử lý."}
+{"id":"c02","text":"OCR nhận dạng chữ trong những trang PDF chỉ chứa ảnh quét, không có lớp văn bản."}
+{"id":"c03","text":"Nội dung tài liệu được chia thành các chunk nhỏ để giữ ngữ cảnh trước khi tạo embedding."}
+{"id":"c04","text":"Sentence-BERT mã hóa ý nghĩa của mỗi đoạn văn thành vector 768 chiều."}
+{"id":"c05","text":"FAISS lập chỉ mục vector và truy xuất nhanh các đoạn gần truy vấn nhất theo cosine."}
+{"id":"c06","text":"PostgreSQL lưu metadata tài liệu, nội dung chunk và lịch sử các lần kiểm tra."}
+{"id":"c07","text":"Phân quyền bảo đảm chỉ tài khoản được phép mới có thể thêm tài liệu vào kho nguồn."}
+{"id":"c08","text":"Precision, recall và F1-score được tính từ TP, FP, FN và dùng để chọn ngưỡng cảnh báo."}
+{"id":"c09","text":"Giao diện kết quả đánh dấu đoạn bị nghi trùng, điểm tương đồng và liên kết tới tài liệu nguồn."}
+{"id":"c10","text":"Cơ sở dữ liệu cần được sao lưu định kỳ để có thể phục hồi khi xảy ra sự cố."}
+{"id":"c11","text":"Phương pháp từ vựng dùng unigram, bigram và cosine để phát hiện nội dung sao chép gần nguyên văn."}
+{"id":"c12","text":"API FastAPI tiếp nhận yêu cầu từ trình duyệt và trả kết quả kiểm tra dưới dạng JSON."}

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Tải báo cáo đồ án, kiểm tra nội dung tương đồng và đối chiếu với kho tài liệu tham chiếu.">
+  <title>Đối chiếu · Báo cáo đồ án</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/review.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Đối chiếu — trang chủ"><span class="brand-mark" aria-hidden="true">Đ</span><span>đối chiếu<span class="brand-sub">BÁO CÁO ĐỒ ÁN</span></span></a>
+    <span class="environment">Bản thử nghiệm cục bộ</span>
+    <span class="connection" id="connection"><span class="dot"></span>Đang kết nối…</span>
+  </header>
+  <main>
+    <section class="page-heading">
+      <div><p class="eyebrow">KHÔNG GIAN KIỂM TRA</p><h1>Kiểm tra nội dung báo cáo</h1><p class="muted">Tìm đoạn tương đồng và đối chiếu trực tiếp với tài liệu nguồn.</p></div>
+      <button id="refresh" class="button secondary" type="button">↻ Làm mới dữ liệu</button>
+    </section>
+    <div id="setup" class="setup" hidden>
+      <strong>Thiết lập kết nối PostgreSQL</strong>
+      <p id="setup-detail"></p>
+      <ol><li>Sao chép <code>.env.example</code> thành <code>.env</code>, nhập tên database, tài khoản và mật khẩu.</li><li>Chạy <code>python -m app.db init</code> để tạo bảng dữ liệu.</li><li>Khởi động lại web và bấm “Làm mới dữ liệu”. Xem <code>docs/WEB_POSTGRESQL.md</code> để tạo database.</li></ol>
+    </div>
+    <div id="notice" role="status" aria-live="polite" hidden></div>
+    <section class="stats" aria-label="Tổng quan kho dữ liệu">
+      <div><span class="stat-value" id="stat-references">—</span><span>Tài liệu tham chiếu</span></div>
+      <div><span class="stat-value" id="stat-chunks">—</span><span>Đoạn trong kho</span></div>
+      <div><span class="stat-value" id="stat-checks">—</span><span>Lần kiểm tra đã lưu</span></div>
+      <div class="stat-note"><span class="small-label">QUY TRÌNH</span><p>Thêm nguồn <span>→</span> Tải báo cáo <span>→</span> Đối chiếu</p></div>
+    </section>
+    <div class="workspace">
+      <section class="panel check-panel">
+        <div class="section-title"><span class="step">01</span><div><h2>Báo cáo cần kiểm tra</h2><p>Báo cáo này không tự thêm vào kho tham chiếu.</p></div></div>
+        <form id="check-form">
+          <label class="dropzone" id="dropzone" for="check-file"><span class="upload-symbol" aria-hidden="true">↑</span><strong id="file-label">Kéo thả báo cáo vào đây</strong><span>hoặc bấm để chọn tệp</span><span class="file-hint" id="file-hint">PDF, DOCX · Tối đa 20 MB</span><input id="check-file" name="file" type="file" accept=".pdf,.docx" required></label>
+          <input type="hidden" name="engine" value="semantic">
+          <input type="hidden" name="threshold" value="0.68">
+          <button class="button primary" id="check-button" type="submit" disabled>Kiểm tra báo cáo <span aria-hidden="true">→</span></button>
+          <p class="field-note">Ngưỡng hiện là thử nghiệm, chưa được hiệu chỉnh trên tập dữ liệu gán nhãn.</p>
+        </form>
+      </section>
+      <section class="panel reference-panel">
+        <div class="section-title"><span class="step">02</span><div><h2>Kho tham chiếu</h2><p>Thêm báo cáo cũ để làm nguồn đối chiếu.</p></div></div>
+        <form id="reference-form"><label class="reference-picker" for="reference-file">Chọn tài liệu nguồn<input id="reference-file" name="file" type="file" accept=".pdf,.docx" required></label><button class="button secondary" id="reference-button" type="submit" disabled>+ Thêm vào kho</button></form>
+        <div id="reference-list" class="reference-list"><p class="empty">Chưa có tài liệu tham chiếu.</p></div>
+        <p class="field-note">Chỉ thêm tài liệu bạn được phép sử dụng. Hiển thị 100 tài liệu nguồn mới nhất.</p>
+      </section>
+    </div>
+    <section class="panel result-panel" id="result-section" aria-labelledby="result-title">
+      <div class="result-heading"><div class="section-title"><span class="step">03</span><div><h2 id="result-title">Kết quả đối chiếu</h2><p id="result-subtitle">Các đoạn nghi vấn và nguồn tham chiếu sẽ xuất hiện tại đây.</p></div></div><button id="export" class="button secondary" type="button" hidden>↓ Tải kết quả JSON</button></div>
+      <div id="result-empty" class="result-empty"><span aria-hidden="true">≍</span><h3>Sẵn sàng cho báo cáo đầu tiên</h3><p>Thêm tài liệu nguồn, sau đó tải báo cáo cần kiểm tra.</p></div>
+      <div id="result" hidden></div>
+    </section>
+    <section class="panel history-panel"><div class="section-title"><div><h2>Lịch sử kiểm tra</h2><p>Kết quả đã lưu trong PostgreSQL · 100 lần gần nhất.</p></div></div><div class="table-scroll"><table><thead><tr><th>Báo cáo</th><th>Thời gian</th><th>Phương pháp</th><th>Nội dung được cảnh báo</th><th><span class="sr-only">Hành động</span></th></tr></thead><tbody id="history"><tr><td colspan="5" class="empty">Chưa có lần kiểm tra nào.</td></tr></tbody></table></div></section>
+    <footer>Điểm tương đồng hỗ trợ giảng viên thẩm định, không tự kết luận đạo văn. PDF ảnh cần OCR trước khi sử dụng.</footer>
+  </main>
+</body>
+</html>

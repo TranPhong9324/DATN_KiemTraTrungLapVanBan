@@ -1,0 +1,14 @@
+* { box-sizing: border-box; }
+html { background: #e9ecf2; }
+body { margin: 0; padding: 28px; color: #1d2635; font-family: "Times New Roman", serif; }
+.docx-page { width: min(100%, 850px); min-height: 1100px; margin: 0 auto; padding: 78px 82px; background: #fff; box-shadow: 0 3px 18px #2538581a; }
+p { margin: 0 0 10px; font-size: 16px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+h1, h2, h3, h4, h5, h6 { margin: 22px 0 12px; line-height: 1.35; }
+h1 { font-size: 25px; } h2 { font-size: 22px; } h3 { font-size: 19px; }
+.align-center { text-align: center; }.align-right { text-align: right; }.align-justify { text-align: justify; }.align-left { text-align: left; }
+.list-item { margin-left: 28px; }
+img { display: block; max-width: 100%; height: auto; margin: 16px auto; }
+.docx-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+.docx-table td { border: 1px solid #4b5563; padding: 7px; vertical-align: top; }
+.docx-table p { margin: 0; }
+@media (max-width: 700px) { body { padding: 10px; }.docx-page { padding: 35px 24px; } }

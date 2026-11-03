@@ -1,0 +1,578 @@
+[
+  {
+    "engine": "lexical",
+    "id": "v01",
+    "split": "validation",
+    "category": "direct_copy",
+    "label": 1,
+    "score": 1.0,
+    "predicted": 1
+  },
+  {
+    "engine": "lexical",
+    "id": "v02",
+    "split": "validation",
+    "category": "paraphrase",
+    "label": 1,
+    "score": 0.317073,
+    "predicted": 1
+  },
+  {
+    "engine": "lexical",
+    "id": "v03",
+    "split": "validation",
+    "category": "same_topic",
+    "label": 0,
+    "score": 0.140248,
+    "predicted": 1
+  },
+  {
+    "engine": "lexical",
+    "id": "v04",
+    "split": "validation",
+    "category": "unrelated",
+    "label": 0,
+    "score": 0.0,
+    "predicted": 0
+  },
+  {
+    "engine": "lexical",
+    "id": "v05",
+    "split": "validation",
+    "category": "direct_copy",
+    "label": 1,
+    "score": 1.0,
+    "predicted": 1
+  },
+  {
+    "engine": "lexical",
+    "id": "v06",
+    "split": "validation",
+    "category": "paraphrase",
+    "label": 1,
+    "score": 0.09245,
+    "predicted": 1
+  },
+  {
+    "engine": "lexical",
+    "id": "v07",
+    "split": "validation",
+    "category": "same_topic",
+    "label": 0,
+    "score": 0.074074,
+    "predicted": 0
+  },
+  {
+    "engine": "lexical",
+    "id": "v08",
+    "split": "validation",
+    "category": "unrelated",
+    "label": 0,
+    "score": 0.074074,
+    "predicted": 0
+  },
+  {
+    "engine": "lexical",
+    "id": "v09",
+    "split": "validation",
+    "category": "direct_copy",
+    "label": 1,
+    "score": 1.0,
+    "predicted": 1
+  },
+  {
+    "engine": "lexical",
+    "id": "v10",
+    "split": "validation",
+    "category": "paraphrase",
+    "label": 1,
+    "score": 0.083624,
+    "predicted": 1
+  },
+  {
+    "engine": "lexical",
+    "id": "v11",
+    "split": "validation",
+    "category": "same_topic",
+    "label": 0,
+    "score": 0.250122,
+    "predicted": 1
+  },
+  {
+    "engine": "lexical",
+    "id": "v12",
+    "split": "validation",
+    "category": "unrelated",
+    "label": 0,
+    "score": 0.069631,
+    "predicted": 0
+  },
+  {
+    "engine": "lexical",
+    "id": "v13",
+    "split": "validation",
+    "category": "direct_copy",
+    "label": 1,
+    "score": 1.0,
+    "predicted": 1
+  },
+  {
+    "engine": "lexical",
+    "id": "v14",
+    "split": "validation",
+    "category": "paraphrase",
+    "label": 1,
+    "score": 0.065606,
+    "predicted": 0
+  },
+  {
+    "engine": "lexical",
+    "id": "v15",
+    "split": "validation",
+    "category": "same_topic",
+    "label": 0,
+    "score": 0.056099,
+    "predicted": 0
+  },
+  {
+    "engine": "lexical",
+    "id": "v16",
+    "split": "validation",
+    "category": "unrelated",
+    "label": 0,
+    "score": 0.029001,
+    "predicted": 0
+  },
+  {
+    "engine": "lexical",
+    "id": "t01",
+    "split": "test",
+    "category": "direct_copy",
+    "label": 1,
+    "score": 1.0,
+    "predicted": 1
+  },
+  {
+    "engine": "lexical",
+    "id": "t02",
+    "split": "test",
+    "category": "paraphrase",
+    "label": 1,
+    "score": 0.111111,
+    "predicted": 1
+  },
+  {
+    "engine": "lexical",
+    "id": "t03",
+    "split": "test",
+    "category": "same_topic",
+    "label": 0,
+    "score": 0.0,
+    "predicted": 0
+  },
+  {
+    "engine": "lexical",
+    "id": "t04",
+    "split": "test",
+    "category": "unrelated",
+    "label": 0,
+    "score": 0.0,
+    "predicted": 0
+  },
+  {
+    "engine": "lexical",
+    "id": "t05",
+    "split": "test",
+    "category": "direct_copy",
+    "label": 1,
+    "score": 1.0,
+    "predicted": 1
+  },
+  {
+    "engine": "lexical",
+    "id": "t06",
+    "split": "test",
+    "category": "paraphrase",
+    "label": 1,
+    "score": 0.13826,
+    "predicted": 1
+  },
+  {
+    "engine": "lexical",
+    "id": "t07",
+    "split": "test",
+    "category": "same_topic",
+    "label": 0,
+    "score": 0.041996,
+    "predicted": 0
+  },
+  {
+    "engine": "lexical",
+    "id": "t08",
+    "split": "test",
+    "category": "unrelated",
+    "label": 0,
+    "score": 0.0,
+    "predicted": 0
+  },
+  {
+    "engine": "lexical",
+    "id": "t09",
+    "split": "test",
+    "category": "direct_copy",
+    "label": 1,
+    "score": 1.0,
+    "predicted": 1
+  },
+  {
+    "engine": "lexical",
+    "id": "t10",
+    "split": "test",
+    "category": "paraphrase",
+    "label": 1,
+    "score": 0.251106,
+    "predicted": 1
+  },
+  {
+    "engine": "lexical",
+    "id": "t11",
+    "split": "test",
+    "category": "same_topic",
+    "label": 0,
+    "score": 0.172414,
+    "predicted": 1
+  },
+  {
+    "engine": "lexical",
+    "id": "t12",
+    "split": "test",
+    "category": "unrelated",
+    "label": 0,
+    "score": 0.07744,
+    "predicted": 0
+  },
+  {
+    "engine": "lexical",
+    "id": "t13",
+    "split": "test",
+    "category": "direct_copy",
+    "label": 1,
+    "score": 1.0,
+    "predicted": 1
+  },
+  {
+    "engine": "lexical",
+    "id": "t14",
+    "split": "test",
+    "category": "paraphrase",
+    "label": 1,
+    "score": 0.0,
+    "predicted": 0
+  },
+  {
+    "engine": "lexical",
+    "id": "t15",
+    "split": "test",
+    "category": "same_topic",
+    "label": 0,
+    "score": 0.071474,
+    "predicted": 0
+  },
+  {
+    "engine": "lexical",
+    "id": "t16",
+    "split": "test",
+    "category": "unrelated",
+    "label": 0,
+    "score": 0.0,
+    "predicted": 0
+  },
+  {
+    "engine": "semantic",
+    "id": "v01",
+    "split": "validation",
+    "category": "direct_copy",
+    "label": 1,
+    "score": 1.0,
+    "predicted": 1
+  },
+  {
+    "engine": "semantic",
+    "id": "v02",
+    "split": "validation",
+    "category": "paraphrase",
+    "label": 1,
+    "score": 0.752541,
+    "predicted": 1
+  },
+  {
+    "engine": "semantic",
+    "id": "v03",
+    "split": "validation",
+    "category": "same_topic",
+    "label": 0,
+    "score": 0.411874,
+    "predicted": 0
+  },
+  {
+    "engine": "semantic",
+    "id": "v04",
+    "split": "validation",
+    "category": "unrelated",
+    "label": 0,
+    "score": 0.204539,
+    "predicted": 0
+  },
+  {
+    "engine": "semantic",
+    "id": "v05",
+    "split": "validation",
+    "category": "direct_copy",
+    "label": 1,
+    "score": 1.0,
+    "predicted": 1
+  },
+  {
+    "engine": "semantic",
+    "id": "v06",
+    "split": "validation",
+    "category": "paraphrase",
+    "label": 1,
+    "score": 0.746063,
+    "predicted": 1
+  },
+  {
+    "engine": "semantic",
+    "id": "v07",
+    "split": "validation",
+    "category": "same_topic",
+    "label": 0,
+    "score": 0.511311,
+    "predicted": 0
+  },
+  {
+    "engine": "semantic",
+    "id": "v08",
+    "split": "validation",
+    "category": "unrelated",
+    "label": 0,
+    "score": 0.24694,
+    "predicted": 0
+  },
+  {
+    "engine": "semantic",
+    "id": "v09",
+    "split": "validation",
+    "category": "direct_copy",
+    "label": 1,
+    "score": 1.0,
+    "predicted": 1
+  },
+  {
+    "engine": "semantic",
+    "id": "v10",
+    "split": "validation",
+    "category": "paraphrase",
+    "label": 1,
+    "score": 0.689894,
+    "predicted": 1
+  },
+  {
+    "engine": "semantic",
+    "id": "v11",
+    "split": "validation",
+    "category": "same_topic",
+    "label": 0,
+    "score": 0.633966,
+    "predicted": 0
+  },
+  {
+    "engine": "semantic",
+    "id": "v12",
+    "split": "validation",
+    "category": "unrelated",
+    "label": 0,
+    "score": 0.360071,
+    "predicted": 0
+  },
+  {
+    "engine": "semantic",
+    "id": "v13",
+    "split": "validation",
+    "category": "direct_copy",
+    "label": 1,
+    "score": 1.0,
+    "predicted": 1
+  },
+  {
+    "engine": "semantic",
+    "id": "v14",
+    "split": "validation",
+    "category": "paraphrase",
+    "label": 1,
+    "score": 0.420615,
+    "predicted": 0
+  },
+  {
+    "engine": "semantic",
+    "id": "v15",
+    "split": "validation",
+    "category": "same_topic",
+    "label": 0,
+    "score": 0.433204,
+    "predicted": 0
+  },
+  {
+    "engine": "semantic",
+    "id": "v16",
+    "split": "validation",
+    "category": "unrelated",
+    "label": 0,
+    "score": 0.352191,
+    "predicted": 0
+  },
+  {
+    "engine": "semantic",
+    "id": "t01",
+    "split": "test",
+    "category": "direct_copy",
+    "label": 1,
+    "score": 1.0,
+    "predicted": 1
+  },
+  {
+    "engine": "semantic",
+    "id": "t02",
+    "split": "test",
+    "category": "paraphrase",
+    "label": 1,
+    "score": 0.430221,
+    "predicted": 0
+  },
+  {
+    "engine": "semantic",
+    "id": "t03",
+    "split": "test",
+    "category": "same_topic",
+    "label": 0,
+    "score": 0.237944,
+    "predicted": 0
+  },
+  {
+    "engine": "semantic",
+    "id": "t04",
+    "split": "test",
+    "category": "unrelated",
+    "label": 0,
+    "score": 0.072407,
+    "predicted": 0
+  },
+  {
+    "engine": "semantic",
+    "id": "t05",
+    "split": "test",
+    "category": "direct_copy",
+    "label": 1,
+    "score": 1.0,
+    "predicted": 1
+  },
+  {
+    "engine": "semantic",
+    "id": "t06",
+    "split": "test",
+    "category": "paraphrase",
+    "label": 1,
+    "score": 0.770498,
+    "predicted": 1
+  },
+  {
+    "engine": "semantic",
+    "id": "t07",
+    "split": "test",
+    "category": "same_topic",
+    "label": 0,
+    "score": 0.483952,
+    "predicted": 0
+  },
+  {
+    "engine": "semantic",
+    "id": "t08",
+    "split": "test",
+    "category": "unrelated",
+    "label": 0,
+    "score": 0.264752,
+    "predicted": 0
+  },
+  {
+    "engine": "semantic",
+    "id": "t09",
+    "split": "test",
+    "category": "direct_copy",
+    "label": 1,
+    "score": 1.0,
+    "predicted": 1
+  },
+  {
+    "engine": "semantic",
+    "id": "t10",
+    "split": "test",
+    "category": "paraphrase",
+    "label": 1,
+    "score": 0.679952,
+    "predicted": 0
+  },
+  {
+    "engine": "semantic",
+    "id": "t11",
+    "split": "test",
+    "category": "same_topic",
+    "label": 0,
+    "score": 0.575824,
+    "predicted": 0
+  },
+  {
+    "engine": "semantic",
+    "id": "t12",
+    "split": "test",
+    "category": "unrelated",
+    "label": 0,
+    "score": 0.17746,
+    "predicted": 0
+  },
+  {
+    "engine": "semantic",
+    "id": "t13",
+    "split": "test",
+    "category": "direct_copy",
+    "label": 1,
+    "score": 1.0,
+    "predicted": 1
+  },
+  {
+    "engine": "semantic",
+    "id": "t14",
+    "split": "test",
+    "category": "paraphrase",
+    "label": 1,
+    "score": 0.564998,
+    "predicted": 0
+  },
+  {
+    "engine": "semantic",
+    "id": "t15",
+    "split": "test",
+    "category": "same_topic",
+    "label": 0,
+    "score": 0.383297,
+    "predicted": 0
+  },
+  {
+    "engine": "semantic",
+    "id": "t16",
+    "split": "test",
+    "category": "unrelated",
+    "label": 0,
+    "score": 0.200398,
+    "predicted": 0
+  }
+]
