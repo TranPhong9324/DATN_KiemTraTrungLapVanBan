@@ -17,9 +17,10 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from app.config import ROOT, Settings
 from app.db import Database
 from app.models import Check, Chunk, Document
-from app.services.checker import Checker, EngineUnavailable, cosine, features, filter_chunks, make_report
+from app.services.checker import Checker, EngineUnavailable, filter_chunks, make_report
 from app.services.documents import DocumentError, extract_chunks, file_hash, safe_filename, validate_file
-from app.services.serper import SerperClient, SerperError, web_query_from_text
+from app.services.serper import SerperClient, SerperError
+from app.services.internet import report_queries, search_batch, search_state
 
 logger = logging.getLogger(__name__)
 
@@ -157,7 +158,7 @@ def create_app(settings: Settings | None = None, database=None):
                     )
                     result["chunk_chars"] = settings.chunk_chars
                     result["elapsed_seconds"] = round(perf_counter() - started, 3)
-                    result["internet_search"] = search_internet(queries, rankings)
+                    result["internet_search"] = search_state(queries, None, app.state.serper is not None, settings.serper_max_queries)
                     check_id = str(uuid4())
                     result["id"] = check_id
                     session.add(Check(id=check_id, document_id=document.id, engine=engine, threshold=threshold, coverage=result["coverage"], report=result))
@@ -175,38 +176,6 @@ def create_app(settings: Settings | None = None, database=None):
                 saved_path.unlink(missing_ok=True)
             upload.file.close()
             processing.release()
-
-    def search_internet(queries, rankings):
-        """Search Internet only after the internal checker has ranked all chunks."""
-        if app.state.serper is None:
-            return {"enabled": False, "provider": "serper", "queries": [], "matches": [], "warning": "Chưa cấu hình SERPER_API_KEY."}
-        ranked = []
-        for query, candidates in zip(queries, rankings):
-            local_score = max((float(score) for _, score in candidates), default=0.0)
-            ranked.append((local_score, len(query.get("text", "")), query))
-        ranked.sort(key=lambda row: (-row[0], -row[1], row[2].get("ordinal", 0)))
-        searches, matches = [], []
-        for local_score, _, query in ranked:
-            if len(searches) >= settings.serper_max_queries:
-                break
-            phrase = web_query_from_text(query.get("text", ""))
-            if not phrase:
-                continue
-            try:
-                payload = app.state.serper.search(phrase, num=settings.serper_max_results)
-            except SerperError as error:
-                return {"enabled": True, "provider": "serper", "queries": searches, "matches": matches, "warning": str(error)}
-            searches.append({"query_id": query["id"], "ordinal": query.get("ordinal", 0), "text": query["text"], "phrase": phrase, "local_score": round(local_score, 6), "result_count": len(payload["organic"])})
-            for item in payload["organic"]:
-                comparison = f'{item.get("title", "")} {item.get("snippet", "")}'
-                web_score = cosine(features(query["text"]), features(comparison))
-                matches.append({
-                    **item, "query_id": query["id"], "query_ordinal": query.get("ordinal", 0),
-                    "query_text": query["text"], "web_score": round(web_score, 6),
-                    "candidate": web_score >= settings.serper_similarity_threshold,
-                })
-        matches.sort(key=lambda item: (-item["candidate"], -item["web_score"], item["query_ordinal"], item.get("position") or 0))
-        return {"enabled": True, "provider": "serper", "queries": searches, "matches": matches, "warning": None}
 
     @app.get("/api/health")
     def health():
@@ -266,8 +235,13 @@ def create_app(settings: Settings | None = None, database=None):
         return process_upload(file, "reference")
 
     @app.post("/api/checks", status_code=201)
-    def check_document(file: UploadFile = File(...), engine: str = Form("semantic"), threshold: float = Form(0.68, gt=0, le=1)):
-        return process_upload(file, "submission", engine, threshold)
+    def check_document(file: UploadFile = File(...), engine: str | None = Form(None), threshold: float | None = Form(None, gt=0, le=1)):
+        # Omitted values follow server configuration; explicit choices stay explicit.
+        selected_engine = engine if engine is not None else ("semantic" if settings.enable_semantic else "lexical")
+        selected_threshold = threshold if threshold is not None else (
+            settings.semantic_threshold if selected_engine == "semantic" else settings.lexical_threshold
+        )
+        return process_upload(file, "submission", selected_engine, selected_threshold)
 
     @app.get("/api/checks")
     def checks():
@@ -280,7 +254,38 @@ def create_app(settings: Settings | None = None, database=None):
             check = session.get(Check, check_id)
             if not check:
                 raise HTTPException(404, "Không tìm thấy kết quả kiểm tra.")
-            return check.report
+            result = dict(check.report)
+            if result.get("document_chunks"):
+                result["internet_search"] = search_state(
+                    report_queries(result), result.get("internet_search"),
+                    app.state.serper is not None, settings.serper_max_queries,
+                )
+            return result
+
+    @app.post("/api/checks/{check_id}/internet/continue")
+    def continue_internet(check_id: str):
+        db = require_db()
+        if app.state.serper is None:
+            raise HTTPException(503, "Chưa cấu hình tìm nguồn Internet.")
+        if not processing.acquire(blocking=False):
+            raise HTTPException(409, "Một đợt xử lý khác đang chạy. Vui lòng thử lại khi hoàn tất.")
+        try:
+            with db.session() as session:
+                check = session.scalar(select(Check).where(Check.id == check_id).with_for_update())
+                if not check:
+                    raise HTTPException(404, "Không tìm thấy kết quả kiểm tra.")
+                result = dict(check.report)
+                queries = report_queries(result)
+                if not queries:
+                    raise HTTPException(409, "Báo cáo cũ thiếu văn bản để tiếp tục. Vui lòng kiểm tra lại tài liệu.")
+                result["internet_search"] = search_batch(
+                    queries, result.get("internet_search"), app.state.serper, settings,
+                )
+                check.report = result
+                session.commit()
+                return result
+        finally:
+            processing.release()
 
     @app.get("/api/documents/{document_id}/file")
     def download(document_id: str):
@@ -311,11 +316,20 @@ def create_app(settings: Settings | None = None, database=None):
             except PreviewError as error:
                 raise HTTPException(503, str(error)) from error
 
-    app.mount("/static", StaticFiles(directory=ROOT / "frontend"), name="static")
+    frontend_dist = ROOT / "frontend" / "dist"
+    app.mount("/static", StaticFiles(directory=ROOT / "frontend" / "public"), name="static")
+    app.mount("/assets", StaticFiles(directory=frontend_dist / "assets", check_dir=False), name="assets")
 
     @app.get("/", include_in_schema=False)
     def index():
-        return FileResponse(ROOT / "frontend" / "index.html")
+        entry = frontend_dist / "index.html"
+        if not entry.is_file():
+            return HTMLResponse(
+                "<h1>Frontend build required</h1><p>Run npm ci and npm run build in frontend, "
+                "then reload this page. For development, run npm run dev in frontend.</p>",
+                status_code=503,
+            )
+        return FileResponse(entry, headers={"Cache-Control": "no-cache"})
 
     return app
 

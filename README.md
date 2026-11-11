@@ -4,6 +4,8 @@
 
 Đã có bản web cục bộ: thêm PDF/DOCX vào kho tham chiếu, tải báo cáo để kiểm tra, xem đoạn đối chiếu và lưu lịch sử trong PostgreSQL.
 
+Giao diện hiện dùng **React + Vite**. Hướng dẫn dev/build/test: [React frontend](docs/REACT_FRONTEND.md).
+
 **Hướng dẫn đầy đủ:** [Chạy web và kết nối PostgreSQL](docs/WEB_POSTGRESQL.md).
 
 ```powershell
@@ -11,15 +13,19 @@
 .\.venv\Scripts\python.exe -m pip install -r requirements-web.txt
 # Tạo database/tài khoản và điền .env theo hướng dẫn trước khi chạy init
 .\.venv\Scripts\python.exe -m app.db init
+cd frontend
+npm ci
+npm run build
+cd ..
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Mở **http://127.0.0.1:8000**. Mặc định dùng so khớp từ vựng; ngữ nghĩa SBERT/FAISS là chế độ tùy chọn cần cài thêm bộ ML và bật cấu hình. PDF scan được nối với Tesseract OCR; cần cài Tesseract và `vie.traineddata` theo `docs/OCR_PDF.md`. Bản này chưa có đăng nhập và chỉ phục vụ thử nghiệm cục bộ.
+Mở **http://127.0.0.1:8000**. Giao diện chọn ngữ nghĩa khi ENABLE_SEMANTIC=true, nếu chưa bật thì dùng so khớp từ vựng. SBERT/FAISS cần cài thêm bộ ML và model cache. PDF scan được nối với Tesseract OCR; cần cài Tesseract và `vie.traineddata` theo `docs/OCR_PDF.md`. Bản này chưa có đăng nhập và chỉ phục vụ thử nghiệm cục bộ.
 
 ## Kế hoạch triển khai và tiếp tục với AI
 
-- [Kế hoạch triển khai G0–G9](KE_HOACH_TRIEN_KHAI.md): công việc, đầu ra, tiêu chí nghiệm thu và bước tiếp theo của từng giai đoạn.
-- [Tiến độ dành cho AI](TIEN_DO_AI.md): trạng thái hiện tại, nhiệm vụ kế tiếp và bằng chứng bàn giao giữa các phiên.
+- [Kế hoạch triển khai G0–G9](docs/KE_HOACH_TRIEN_KHAI.md): công việc, đầu ra, tiêu chí nghiệm thu và bước tiếp theo của từng giai đoạn.
+- [Tiến độ dành cho AI](docs/TIEN_DO.md): trạng thái hiện tại, nhiệm vụ kế tiếp và bằng chứng bàn giao giữa các phiên.
 - [Thiết kế lấy tài liệu nguồn bằng API miễn phí](docs/WEB_SOURCE_API.md): OpenAlex/Crossref/Unpaywall, Tavily tùy chọn, lọc Open Access và nhập vào kho `reference`.
 
 Kế hoạch mới đã đối chiếu mã nguồn ngày 19/09/2026. Phần hướng dẫn Module 1 bên dưới là tài liệu cũ; `vector_store.py` đã có trong dự án, còn việc kiểm chứng baseline được lên lịch ở G0.

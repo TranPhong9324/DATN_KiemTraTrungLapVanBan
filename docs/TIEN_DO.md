@@ -4,13 +4,13 @@
 
 ## Trạng thái hiện tại
 
-- `updated_at`: 2026-09-21
+- `updated_at`: 2026-11-08
 - `project_status`: IN_PROGRESS
 - `current_stage`: WEB_MVP (ưu tiên xây web theo yêu cầu mới; triển khai một phần G1/G3/G4/G5/G6, chưa nghiệm thu toàn bộ các giai đoạn)
 - `next_task`: G2.2
 - `next_action`: Thu thập chunk từ báo cáo thật, gán nhãn độc lập, rà soát các chunk bị bộ lọc loại nhầm và chạy lại `python -m evaluation.evaluate`; chỉ chốt ngưỡng cuối sau khi tập thật đủ đại diện.
 - `last_completed_stage`: Chưa có giai đoạn triển khai nào được nghiệm thu theo kế hoạch mới.
-- `latest_handoff`: docs/handoffs/WEB_MVP.md
+- `latest_handoff`: docs/handoffs/REACT_MIGRATION.md
 - `blockers`: Không còn chặn kết nối PostgreSQL, model hoặc quy trình đo. Tập hiện tại chỉ có 32 cặp kiểm soát và 10 truy vấn; chưa đủ để công bố chất lượng cuối.
 
 ## Bảng giai đoạn
@@ -132,3 +132,77 @@
 - Đang làm dở: ghi tệp đã sửa, test đã chạy, lỗi còn lại và lệnh/hành động kế tiếp vào đây.
 - Bị chặn: ghi nguyên nhân cụ thể và điều kiện để tiếp tục; không tự bỏ qua tiêu chí nghiệm thu.
 - Người dùng có thể giao tiếp: “Đọc kế hoạch và tiến độ, tiếp tục nhiệm vụ tiếp theo.” AI vẫn phải được gọi trong một phiên làm việc; tệp này không tự chạy công việc.
+
+## Cập nhật chuyển React và sửa engine mặc định (08/11/2026)
+
+- Giao diện hiện dùng React + Vite; cấu trúc component và hướng dẫn dev/build/test: [REACT_FRONTEND.md](REACT_FRONTEND.md).
+- Backend phục vụ frontend/dist. Script start-web.ps1 build React trước khi khởi động.
+- Thêm chọn lexical/semantic theo trạng thái backend, lấy ngưỡng từ Settings; sửa lỗi API mặc định semantic trong khi cấu hình tắt gây 6 test lỗi.
+- Kiểm chứng: 29 test backend/PostgreSQL tách biệt đạt, 6 test React đạt, 1 test Edge headless đạt; build thành công.
+- Test browser dùng API giả lập và kiểm tra desktop/mobile, không ghi dữ liệu người dùng. Chưa nghiệm thu model/OCR thật trong phiên này.
+- Bàn giao: [REACT_MIGRATION.md](handoffs/REACT_MIGRATION.md).
+- Bước kế tiếp vẫn là G2.2: dữ liệu báo cáo thật và đánh giá; không coi chuyển framework là hoàn tất độ chính xác thuật toán.
+
+## Giao diện thẩm định theo mẫu (08/11/2026)
+
+- Kết quả mặc định mở Văn bản đánh dấu: chữ serif, tô màu theo mức điểm, số nguồn màu cam bên lề.
+- Danh sách gộp nguồn nội bộ và Internet, đánh số ổn định theo vị trí đoạn. Có sắp xếp theo thứ tự xuất hiện hoặc điểm.
+- Bấm thẻ nguồn, số bên lề hoặc đoạn tô màu để mở hộp đối chiếu. Hộp hiển thị đoạn báo cáo và đoạn nguồn, làm đậm từ chung; hỗ trợ Đóng/Escape và điều hướng nguồn.
+- Loại trừ từng kết quả hoặc chọn nhiều; xem danh sách đã loại trừ và khôi phục.
+- Loại trừ lưu localStorage theo ID báo cáo, không thay đổi PostgreSQL hoặc phần trăm gốc. JSON có trường review.excluded_result_ids để giữ thao tác thẩm định. Chưa có lưu thẩm định nhiều người dùng trên server.
+- Highlight dựa trên chunk đã trích xuất; Bản gốc vẫn là PDF/DOCX xem riêng. Không khẳng định giữ nguyên bố cục bản gốc trong Văn bản đánh dấu.
+- Kiểm chứng: npm test 9 passed, npm run build thành công, npm run test:e2e 1 passed trên Edge headless; kiểm tra dialog, Escape, loại trừ/khôi phục, xuất JSON, desktop/mobile. API trong browser test giả lập.
+- Bản FastAPI ở 8000 đã trả HTML tham chiếu assets mới, HTTP 200. Không đổi API/schema/model.
+
+## Cập nhật đối chiếu từng câu (08/11/2026)
+
+- Web chuyển đơn vị truy vấn/kho nguồn sang câu, giữ offset trang/khối và cảnh báo riêng từng câu; semantic encode theo batch.
+- Kho cũ dùng được qua dựng câu lúc kiểm tra; schema mới 4, báo cáo cũ giữ nguyên và cần kiểm tra lại để có kết quả câu.
+- Không khôi phục chức năng một nguồn chính đã hoàn tác. Nhiều nguồn của một câu vẫn hiện các số nguồn.
+- Ngưỡng hiện chưa được hiệu chỉnh cho câu; threshold_calibrated=false. Internet vẫn giới hạn số câu tìm và chỉ đối chiếu snippet.
+- Kiểm chứng: 41 test backend, 10 test React, 2 test Edge đạt; build thành công và smoke test SBERT/FAISS thật đạt.
+- Chi tiết: [DOI_CHIEU_TUNG_CAU.md](DOI_CHIEU_TUNG_CAU.md).
+- Bước tiếp: dữ liệu câu thật, gán nhãn và hiệu chỉnh ngưỡng/đánh giá trước khi kết luận chất lượng phát hiện.
+
+## Sửa tô đúng vùng trùng theo mẫu 1 (08/11/2026)
+
+- Bổ sung app/services/alignment.py: căn chỉnh chuỗi từ với nguồn bằng SequenceMatcher, giữ offset gốc. Cụm thông thường cần ít nhất 3 từ và 12 ký tự; hai văn bản giống toàn bộ có thể dùng cụm ngắn từ 2 từ.
+- API trả highlight_spans theo query_chunk_id, start/end và kind. Offset là code point Python; frontend chuyển sang UTF-16 khi cắt chuỗi.
+- Cảnh báo lexical không có cụm đủ bằng chứng không được tô cả câu. Semantic không có cụm nguyên văn dùng loại semantic_sentence riêng, hiển thị xanh nhạt/gạch chấm và giải thích rõ.
+- Frontend dùng mark inline, màu bám theo chữ và tự xuống dòng. Không dùng nút nhiều dòng có nền chữ nhật để tô toàn bộ câu. Ghép câu về cùng đoạn, giữ separator_before/after cho kết quả mới, bỏ nhãn Đoạn/khối/Câu khỏi phần nội dung đọc.
+- Các phạm vi trùng chồng nhau thành một vùng có một nhãn đại diện; vẫn giữ các nguồn trong hộp đối chiếu và sidebar. Không áp dụng một nguồn chính cho toàn bộ câu/đoạn.
+- Mở kết quả lịch sử được bổ sung alignment khi đọc dựa trên văn bản/nguồn đã lưu, không ghi đè snapshot hoặc tính lại điểm. Phải tải lại trang và mở lại kết quả để nhận dữ liệu mới.
+- Điểm/cảnh báo và coverage gốc không bị đổi bởi việc căn chỉnh màu. Đây là vùng bằng chứng từ/cụm từ, không phải phép đo chất lượng phát hiện mới.
+- Văn bản đánh dấu được dựng từ nội dung trích xuất, chưa overlay trực tiếp lên bố cục PDF/DOCX. Bản gốc vẫn xem riêng. Chất lượng trích xuất/OCR và dấu câu ảnh hưởng kết quả; Internet vẫn chỉ đối chiếu title/snippet.
+- Kiểm chứng: 50 test backend/PostgreSQL tách biệt, 16 test frontend, 3 test Edge đều đạt; build thành công. Có kiểm tra đoạn dài chỉ tô hai cụm, phần còn lại để trắng, nguồn chồng nhau, mobile, emoji/NFD và đọc lịch sử không sửa dữ liệu.
+
+## Khôi phục mốc “sửa lại giao diện dự án như này” (08/11/2026)
+
+- Theo yêu cầu người dùng, quay về giao diện thẩm định ban đầu: STT cạnh đoạn, STT trên thẻ nguồn và trong hộp đối chiếu khớp nhau; giữ loại trừ/khôi phục, sắp xếp và chọn nhiều.
+- Hoàn tác các thay đổi sau mốc này: một nguồn chính, tách câu, căn chỉnh cụm từ và tô inline. Backend quay lại đối chiếu theo chunk, schema 3.
+- Giữ React/Vite, tích hợp FastAPI, bản xem gốc, kho tài liệu, .env và dữ liệu PostgreSQL.
+- Không xóa/sửa kết quả lịch sử schema 4 đã được tạo; cần kiểm tra lại tài liệu để có kết quả theo cách cũ. Chức năng tách câu trong DOI_CHIEU_TUNG_CAU.md hiện là tài liệu lưu trữ, không còn áp dụng.
+- Kiểm chứng: 29 test backend, 10 test React (có test STT đồng nhất), 1 test Edge đạt; build thành công và khởi động lại cổng 8000.
+
+## Tìm Internet đầy đủ theo từng đợt (08/11/2026)
+
+- Sửa giới hạn 5 đoạn/cả báo cáo thành tối đa 5 đoạn/đợt (SERPER_MAX_QUERIES), duyệt theo thứ tự văn bản và tiếp tục qua mọi đoạn đủ điều kiện.
+- Upload không tự gửi nội dung ra ngoài. Người dùng xác nhận gửi truy vấn tới Serper/Google trước khi bắt đầu tìm Internet; đây là phương án an toàn sau khi kiểm duyệt tự động từ chối gửi toàn báo cáo không có đồng ý rõ ràng.
+- Có tiến độ đã tìm/bỏ qua/còn lại, trạng thái từng đoạn và tạm dừng sau đợt hiện tại. Mở lịch sử để tiếp tục từ tiến độ đã lưu, kể cả báo cáo cũ đã tìm 5 đoạn rời rạc.
+- Không đổi UI STT/đơn vị chunk hoặc điểm nội bộ. Internet vẫn so title/snippet; đoạn ngắn được ghi bỏ qua, không tính là đã kiểm tra.
+- Kiểm chứng: 36 test backend, 14 test React, 2 test Edge đạt; provider/API giả lập, không gửi nội dung người dùng ra ngoài.
+- Hướng dẫn: [INTERNET_BATCHES.md](INTERNET_BATCHES.md).
+
+## Bỏ xác nhận, tự động tìm Internet sau kiểm tra (08/11/2026)
+
+- Người dùng yêu cầu rõ xóa bước xác nhận và cho tự động gửi truy vấn báo cáo để tìm toàn bộ. Đây là ủy quyền mới thay cho cơ chế opt-in trước đó.
+- Bỏ checkbox và allow_external_search ở API. Sau upload/đối chiếu nội bộ, frontend tự chạy các đợt Internet đến hết đoạn đủ điều kiện.
+- Giữ tiến độ, giới hạn từng đợt, tạm dừng/tiếp tục và dừng khi lỗi API; lịch sử chưa hoàn tất tiếp tục bằng nút hiện có, không phải xác nhận.
+- 36 test backend, 14 test React, 2 test Edge đạt; build thành công. Chỉ dùng Serper/API giả lập trong kiểm thử.
+- Hướng dẫn hiện hành: [INTERNET_BATCHES.md](INTERNET_BATCHES.md).
+
+## Bỏ phương pháp và ngưỡng khỏi form web (08/11/2026)
+
+- Bỏ dropdown phương pháp, số ngưỡng và ghi chú validation trong form tải báo cáo; bỏ giá trị ngưỡng ở tóm tắt kết quả.
+- Upload không gửi engine/threshold, backend tự dùng cấu hình .env hiện tại. Không sửa .env hoặc thuật toán.
+- Kiểm chứng: 14 test React đạt, build thành công; kiểm tra Edge luồng upload và tìm Internet tự động.

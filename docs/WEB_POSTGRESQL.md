@@ -1,6 +1,6 @@
 # Chạy web kiểm tra trùng lặp và kết nối PostgreSQL
 
-Phiên bản web đầu tiên: FastAPI phục vụ cả API và giao diện HTML/CSS/JavaScript. PostgreSQL lưu metadata, đoạn văn và kết quả; tệp gốc nằm trong `storage/uploads`. Giao diện này chưa dùng React, để chạy ngay cùng Python mà không cần một máy chủ frontend riêng. Các module CLI cũ vẫn giữ nguyên.
+FastAPI phục vụ API và bản build React/Vite. PostgreSQL lưu metadata, đoạn văn và kết quả; tệp gốc nằm trong storage/uploads. Cần build frontend trước khi mở cổng 8000: xem [React frontend](REACT_FRONTEND.md). Script scripts/start-web.ps1 tự build trước khi chạy backend.
 
 ## 1. Cài thư viện web
 

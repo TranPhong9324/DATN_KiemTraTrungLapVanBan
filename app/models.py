@@ -50,6 +50,6 @@ class Check(Base):
     engine: Mapped[str] = mapped_column(String(20))
     threshold: Mapped[float] = mapped_column(Float)
     coverage: Mapped[float] = mapped_column(Float)
-    # Immutable report snapshot: matched text/locations survive later corpus changes.
+    # Internal comparison snapshot survives corpus changes; Internet batches append saved progress.
     report: Mapped[dict] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

@@ -1,0 +1,4 @@
+import { date, method, number } from '../format.js';
+export default function HistoryPanel({ checks, busy, onOpen }) {
+  return <section className="panel history-panel"><div className="section-title"><div><h2>Lịch sử kiểm tra</h2><p>100 lần kiểm tra gần nhất.</p></div></div><div className="table-scroll"><table><thead><tr><th>Báo cáo</th><th>Thời gian</th><th>Phương pháp</th><th>Nội dung được cảnh báo</th><th><span className="sr-only">Hành động</span></th></tr></thead><tbody>{checks.length ? checks.map(item => <tr key={item.id}><td>{item.filename}</td><td>{date(item.created_at)}</td><td>{method(item.engine)}</td><td>{number(item.coverage)}%</td><td><button className="button secondary" disabled={busy} onClick={() => onOpen(item.id)}>Xem kết quả</button></td></tr>) : <tr><td colSpan={5} className="empty">Chưa có lần kiểm tra nào.</td></tr>}</tbody></table></div></section>;
+}

@@ -1,3 +1,4 @@
+import re
 import unicodedata
 
 from fastapi.testclient import TestClient
@@ -21,7 +22,11 @@ def upload(client, endpoint, content=None, name="baocao.docx", **data):
 def test_no_database_still_serves_setup(tmp_path):
     with TestClient(create_app(Settings(upload_dir=tmp_path))) as client:
         assert client.get("/").status_code == 200
-        assert client.get("/static/app.js").status_code == 200
+        entry = client.get("/")
+        assert 'id="root"' in entry.text
+        for asset in re.findall(r'(?:src|href)="(/assets/[^"]+)"', entry.text):
+            assert client.get(asset).status_code == 200
+        assert client.get("/static/doc-preview.css").status_code == 200
         assert client.get("/api/health").json()["database"] == "not_configured"
         assert upload(client, "/api/references").status_code == 503
 
@@ -178,3 +183,83 @@ def test_failed_check_rolls_back_and_removes_file(web, monkeypatch):
         assert session.scalar(select(func.count(Document.id))) == 1
         assert session.scalar(select(func.count(Check.id))) == 0
     assert len(list(settings.upload_dir.iterdir())) == 1
+
+
+def test_omitted_engine_and_threshold_follow_configuration(web, monkeypatch):
+    from dataclasses import replace
+    from app.services.checker import Checker
+    _, original_app, settings = web
+    configured = replace(settings, enable_semantic=True, semantic_threshold=0.73)
+    app = create_app(configured, original_app.state.database)
+    lexical = Checker(settings)
+    selected = []
+    def search(queries, references, engine):
+        selected.append(engine)
+        return lexical.search(queries, references, "lexical")
+    # This test verifies API routing/defaults; it does not claim to test the model.
+    monkeypatch.setattr(app.state.checker, "search", search)
+    with TestClient(app) as client:
+        upload(client, "/api/references")
+        response = upload(client, "/api/checks")
+        assert response.status_code == 201, response.text
+        assert selected == ["semantic"]
+        assert response.json()["engine"] == "semantic"
+        assert response.json()["threshold"] == 0.73
+        explicit = upload(client, "/api/checks", engine="lexical", threshold="0.91")
+        assert explicit.status_code == 201
+        assert selected[-1] == "lexical"
+        assert explicit.json()["threshold"] == 0.91
+
+def test_internet_batches_cover_all_chunks_without_confirmation_and_persist(web):
+    from dataclasses import replace
+    from test_internet import FakeSerper
+    client, original_app, settings = web
+    upload(client, "/api/references")
+    app = create_app(replace(settings, serper_max_queries=2), original_app.state.database)
+    provider = FakeSerper()
+    app.state.serper = provider
+    paragraphs = [f"Đoạn {i} trình bày chức năng hệ thống xử lý văn bản và tìm kiếm nội dung tương đồng trong báo cáo." for i in range(5)]
+    with TestClient(app) as test_client:
+        response = upload(test_client, "/api/checks", make_docx(*paragraphs))
+        assert response.status_code == 201, response.text
+        report = response.json()
+        assert provider.calls == []  # Save internal results before continuation batches.
+        assert report["internet_search"]["searched_chunks"] == 0
+        endpoint = f'/api/checks/{report["id"]}/internet/continue'
+        assert provider.calls == []
+        first = test_client.post(endpoint).json()
+        assert first["internet_search"]["searched_chunks"] == 2
+        assert first["internet_search"]["pending_chunks"] == 3
+        saved = test_client.get(f'/api/checks/{report["id"]}').json()
+        assert saved["internet_search"]["searched_chunks"] == 2
+        second = test_client.post(endpoint).json()
+        final = test_client.post(endpoint).json()
+        assert second["internet_search"]["searched_chunks"] == 4
+        assert final["internet_search"]["complete"]
+        assert [item["ordinal"] for item in final["internet_search"]["queries"]] == list(range(5))
+        assert len(provider.calls) == 5
+        test_client.post(endpoint)
+        assert len(provider.calls) == 5
+
+def test_internet_error_progress_survives_reload_and_resumes_without_repeating_successes(web):
+    from dataclasses import replace
+    from test_internet import FakeSerper
+    client, original_app, settings = web
+    upload(client, "/api/references")
+    app = create_app(replace(settings, serper_max_queries=3), original_app.state.database)
+    provider = FakeSerper(fail_on=2)
+    app.state.serper = provider
+    content = make_docx(*[f"Đoạn {i} mô tả chức năng kiểm tra văn bản trong hệ thống quản lý báo cáo của trường." for i in range(3)])
+    with TestClient(app) as test_client:
+        report = upload(test_client, "/api/checks", content).json()
+        endpoint = f'/api/checks/{report["id"]}/internet/continue'
+        failed = test_client.post(endpoint).json()
+        assert failed["internet_search"]["status"] == "error"
+        assert failed["internet_search"]["searched_chunks"] == 1
+        saved = test_client.get(f'/api/checks/{report["id"]}').json()
+        assert saved["internet_search"]["searched_chunks"] == 1
+        provider.fail_on = None
+        final = test_client.post(endpoint).json()
+        assert final["internet_search"]["complete"]
+        assert len(final["internet_search"]["queries"]) == 3
+        assert len(provider.calls) == 4  # Three successes and one failed request.

@@ -17,3 +17,7 @@ vector_store.index
 vector_store.meta.pkl
 .pptx-build/
 .pptx-inspect/
+
+# React build and dependencies
+frontend/node_modules/
+frontend/dist/
