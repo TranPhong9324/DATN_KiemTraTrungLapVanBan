@@ -16,18 +16,35 @@ export function reportChunks(report, matches) {
 }
 
 function resultsFor(report) {
-  const internal = (report.matches || []).map((match, index) => ({
-    id: `internal-${match.alert_number || index + 1}`,
+  const chunksById = new Map((report.document_chunks || []).map(chunk => [chunk.id, chunk]));
+  const internal = (report.matches || []).flatMap((match, index) => {
+    const queryIds = match.query_chunk_ids?.length ? match.query_chunk_ids : [match.query_chunk_id || `old-${index}`];
+    const groupId = `internal-${match.alert_number || index + 1}`;
+    return queryIds.map((queryId, offset) => {
+      const chunk = chunksById.get(queryId);
+      return ({
+    id: queryIds.length === 1 ? groupId : `${groupId}-chunk-${queryId}`,
+    exclusionGroupId: groupId,
     originalNumber: match.alert_number || index + 1,
     title: match.source_filename, score: match.score, type: 'internal',
-    queryIds: match.query_chunk_ids || [match.query_chunk_id || `old-${index}`],
-    ordinal: match.query_ordinal ?? index, text: match.source_text || '',
-    queryText: match.query_text || '', location: match.source_location,
+    queryIds: [queryId],
+    ordinal: chunk?.ordinal ?? match.query_ordinals?.[offset] ?? ((match.query_ordinal ?? index) + offset), text: match.source_text || '',
+    queryText: chunk?.text || match.query_text || '', location: match.source_location,
     href: `/api/documents/${encodeURIComponent(match.source_document_id)}/file`,
     detail: locationLabel(match.source_location) || 'Kho tài liệu nội bộ',
     label: match.alert_label || report.alert_label || method(report.engine),
-  }));
-  const web = (report.internet_search?.matches || []).map((item, index) => ({
+      });
+    });
+  });
+  // Filter saved reports too, preserving original IDs for browser exclusions.
+  const bestWeb = new Map();
+  (report.internet_search?.matches || []).forEach((item, index) => {
+    const previous = bestWeb.get(item.query_id);
+    if (!previous || (item.web_score || 0) > (previous.item.web_score || 0)) {
+      bestWeb.set(item.query_id, { item, index });
+    }
+  });
+  const web = [...bestWeb.values()].map(({ item, index }) => ({
     id: `web-${index + 1}`, title: item.title || 'Nguồn Internet',
     score: item.web_score || 0, type: 'web', queryIds: [item.query_id],
     ordinal: item.query_ordinal ?? index, text: item.snippet || '',
@@ -37,6 +54,24 @@ function resultsFor(report) {
   }));
   return [...internal, ...web].sort((a, b) => a.ordinal - b.ordinal || (a.type === b.type ? 0 : a.type === 'internal' ? -1 : 1))
     .map((item, index) => ({ ...item, number: index + 1 }));
+}
+
+export function reviewSummary(report, chunks, results) {
+  const eligible = chunks.filter(chunk => !chunk.ignored);
+  const internal = new Set(results.filter(item => item.type === 'internal').flatMap(item => item.queryIds));
+  const internet = new Set(results.filter(item => item.type === 'web' && item.candidate).flatMap(item => item.queryIds));
+  // Include internal alerts omitted from the card list by report limits.
+  eligible.forEach(chunk => { if (chunk.max_score > 0) internal.add(chunk.id); });
+  const flagged = eligible.filter(chunk => internal.has(chunk.id) || internet.has(chunk.id));
+  const total = eligible.reduce((sum, chunk) => sum + (chunk.text || '').length, 0);
+  const marked = flagged.reduce((sum, chunk) => sum + (chunk.text || '').length, 0);
+  return {
+    coverage: report.document_chunks?.length ? (total ? marked / total * 100 : null) : report.coverage,
+    matched: report.document_chunks?.length ? flagged.length : report.matched_chunks,
+    eligible: report.eligible_chunks ?? report.total_chunks ?? eligible.length,
+    internal: eligible.filter(chunk => internal.has(chunk.id)).length,
+    internet: eligible.filter(chunk => internet.has(chunk.id)).length,
+  };
 }
 
 function webDomain(href) {
@@ -101,12 +136,24 @@ function Review({ report }) {
   const [checked, setChecked] = useState(new Set());
   const [showExcluded, setShowExcluded] = useState(false);
   const storageKey = `document-review:${report.id || report.document_id}`;
-  const [excluded, setExcluded] = useState(() => readExclusions(storageKey));
+  const [excluded, setExcluded] = useState(() => {
+    const stored = readExclusions(storageKey);
+    // Carry forward exclusions saved before grouped internal alerts were split.
+    const items = resultsFor(report);
+    items.forEach(item => {
+      if (stored.has(item.exclusionGroupId)) stored.add(item.id);
+    });
+    items.forEach(item => {
+      if (item.exclusionGroupId && item.exclusionGroupId !== item.id) stored.delete(item.exclusionGroupId);
+    });
+    return stored;
+  });
   const blocks = useRef(new Map());
   const cards = useRef(new Map());
   const results = resultsFor(report);
   const matches = (report.matches || []).map((item, index) => ({ ...item, alert_number: item.alert_number || index + 1 }));
   const chunks = reportChunks(report, matches);
+  const summary = reviewSummary(report, chunks, results);
   const activeResults = results.filter(item => !excluded.has(item.id));
   const excludedCount = results.length - activeResults.length;
   const visible = results.filter(item => showExcluded ? excluded.has(item.id) : !excluded.has(item.id))
@@ -139,9 +186,9 @@ function Review({ report }) {
   const setRef = (map, id) => element => { if (element) map.current.set(id, element); else map.current.delete(id); };
   return <div id="result">
     <div className="review-summary">
-      <div><span className="review-percent">{number(report.coverage)}{report.coverage == null ? '' : '%'}</span><strong>Nội dung được cảnh báo <small>Kết quả gốc</small></strong></div>
-      <div><strong>{number(report.matched_chunks)} / {number(report.eligible_chunks ?? report.total_chunks)} đoạn</strong><span>{report.alert_label || method(report.engine)}</span></div>
-      <div><strong>{number(activeResults.length)} kết quả đang xem · {number(excludedCount)} đã loại trừ</strong><span>Đọc nội dung đối chiếu trước khi kết luận.</span></div>
+      <div><span className="review-percent">{number(summary.coverage)}{summary.coverage == null ? '' : '%'}</span><strong>Nội dung được cảnh báo <small>Kho nội bộ và Internet</small></strong></div>
+      <div><strong>{number(summary.matched)} / {number(summary.eligible)} đoạn có cảnh báo</strong><span>Nội bộ: {number(summary.internal)} đoạn · Internet: {number(summary.internet)} đoạn</span><span>{report.internet_search?.enabled && !report.internet_search?.complete ? 'Internet chưa hoàn tất · Số liệu cập nhật theo tiến độ' : 'Mỗi đoạn chỉ tính một lần khi tổng hợp'}</span></div>
+      <div><strong>{number(activeResults.length)} kết quả đang xem · {number(excludedCount)} đã loại trừ</strong><span>Nội bộ: {results.filter(item => item.type === 'internal').length} nguồn · Internet: {results.filter(item => item.type === 'web').length} nguồn</span><span>Tỷ lệ tính theo độ dài đoạn có cảnh báo, không phải phần trăm đạo văn.</span></div>
     </div>
     {(report.warnings || []).map((warning, index) => <p className="warning" key={index}>{warning}</p>)}
     <div className="review-layout">
@@ -159,7 +206,7 @@ function Review({ report }) {
                 searched: 'Đã tìm', skipped: 'Bỏ qua — đoạn quá ngắn', error: 'Bị gián đoạn — cần thử lại',
               })[report.internet_search.query_states[chunk.id]?.status] || 'Chưa kiểm tra'}</div>}
               <div className="document-text">
-                {related.length > 0 && <span className="document-markers">{related.map(item => <button key={item.id} className="document-marker" aria-label={item.type === 'internal' ? `Mở cảnh báo ${item.originalNumber}` : `Mở nguồn Internet ${item.number}`} onClick={() => focusResult(item, 'card')}>{item.number}</button>)}</span>}
+                {related.length > 0 && <span className="document-markers">{related.map(item => <button key={item.id} className="document-marker" aria-label={item.type === 'internal' ? `Mở cảnh báo ${item.number}` : `Mở nguồn Internet ${item.number}`} onClick={() => focusResult(item, 'card')}>{item.number}</button>)}</span>}
                 {related.length ? <button className={`document-highlight severity-${severity(score)}`} aria-label={`Xem đối chiếu đoạn ${chunk.ordinal ?? chunk.id}`} onClick={() => focusResult(related[0], 'card')}>{chunk.text}</button> : <span>{chunk.text}</span>}
               </div>
             </section>;
@@ -177,14 +224,14 @@ function Review({ report }) {
         <div className="alerts-list">
           {visible.map(item => <article key={item.id} ref={setRef(cards, item.id)} className={`alert-card severity-${severity(item.score)} ${selection?.id === item.id ? 'is-active' : ''} ${excluded.has(item.id) ? 'is-excluded' : ''}`}>
             <div className="alert-card-top">{bulk && <input type="checkbox" aria-label={`Chọn kết quả ${item.number}`} checked={checked.has(item.id)} onChange={event => { const next = new Set(checked); if (event.target.checked) next.add(item.id); else next.delete(item.id); setChecked(next); }} />}<span className="severity-dot" aria-hidden="true" /><span className="alert-number">{item.number}</span><span>{levelLabel(item.score)} - {number(item.score * 100)}%</span></div>
-            <button className="alert-title" aria-label={item.type === 'internal' ? `Cảnh báo ${item.originalNumber}: ${item.title}` : `Nguồn Internet ${item.number}: ${item.title}`} onClick={() => focusResult(item)}>{item.title}</button>
+            <button className="alert-title" aria-label={item.type === 'internal' ? `Cảnh báo ${item.number}: ${item.title}` : `Nguồn Internet ${item.number}: ${item.title}`} onClick={() => focusResult(item)}>{item.title}</button>
             <div className="alert-domain">{item.href ? <a href={item.href} target="_blank" rel="noopener noreferrer">{item.detail}<span aria-hidden="true"> ↗</span></a> : <span>{item.detail}</span>}</div>
             <div className="alert-card-actions"><button className="icon-action" aria-label={`Chi tiết kết quả ${item.number}`} onClick={() => focusResult(item)}>ⓘ</button><span>{item.type === 'internal' ? 'Nguồn nội bộ' : 'Nguồn Internet · Đoạn trích'}</span><button className="icon-action" aria-label={`${excluded.has(item.id) ? 'Khôi phục' : 'Loại trừ'} kết quả ${item.number}`} title={excluded.has(item.id) ? 'Khôi phục kết quả' : 'Loại trừ kết quả'} onClick={() => toggleExclusion(item.id)}>{excluded.has(item.id) ? '↶' : <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7" /></svg>}</button></div>
           </article>)}
           {!visible.length && <div className="result-empty"><h3>{showExcluded ? 'Chưa có kết quả bị loại trừ' : 'Không có kết quả cần hiển thị'}</h3><p>{excludedCount ? 'Bạn có thể khôi phục kết quả đã loại trừ.' : 'Không tìm thấy đoạn vượt ngưỡng trong kho nội bộ.'}</p></div>}
           {report.internet_search?.warning && <p className="field-note">{report.internet_search.warning}</p>}
         </div>
-        <p className="review-storage-note">Loại trừ được lưu trên trình duyệt này, kèm trong JSON khi tải xuống. Điểm tổng của báo cáo gốc giữ nguyên.</p>
+        <p className="review-storage-note">Loại trừ được lưu trên trình duyệt này, kèm trong JSON khi tải xuống. Tỷ lệ tổng hợp nội bộ và Internet không thay đổi theo thao tác loại trừ.</p>
       </aside>
     </div>
     <div className="review-bottom-bar"><span><i className="legend low" /> Thấp <i className="legend medium" /> Trung bình <i className="legend high" /> Cao</span><button className="text-action" onClick={() => exportReport(report, excluded)}>↓ Tải kết quả thẩm định</button></div>
@@ -194,7 +241,7 @@ function Review({ report }) {
 
 export default function ReportPanel({ report, sectionRef, busy = false, internetRunning = false, internetStopping = false, onContinueInternet, onStopInternet }) {
   return <section ref={sectionRef} className="panel result-panel" aria-labelledby="result-title">
-    <div className="result-heading"><div className="section-title"><span className="step">03</span><div><h2 id="result-title">Kết quả đối chiếu</h2><p>{report?.filename || 'Các đoạn nghi vấn và nguồn tham chiếu sẽ xuất hiện tại đây.'}</p></div></div>{report && <button className="button secondary" onClick={() => exportReport(report, readExclusions(`document-review:${report.id || report.document_id}`))}>↓ Tải kết quả JSON</button>}</div>
+    <div className="result-heading"><div className="section-title"><span className="step">03</span><div><h2 id="result-title">Kết quả đối chiếu</h2><p>{report?.filename || 'Các đoạn nghi vấn và nguồn tham chiếu sẽ xuất hiện tại đây.'}</p></div></div></div>
     {report && <InternetProgress key={report.id} report={report} busy={busy} running={internetRunning} stopping={internetStopping} onContinue={onContinueInternet} onStop={onStopInternet} />}
     {report ? <Review key={report.id || report.document_id} report={report} /> : <div className="result-empty"><span aria-hidden="true">≍</span><h3>Sẵn sàng cho báo cáo đầu tiên</h3><p>Thêm tài liệu nguồn, sau đó tải báo cáo cần kiểm tra.</p></div>}
   </section>;

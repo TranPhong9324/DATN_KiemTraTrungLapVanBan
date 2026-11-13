@@ -42,7 +42,7 @@ def create_app(settings: Settings | None = None, database=None):
     app.state.settings = settings
     app.state.database = database
     app.state.checker = checker
-    app.state.serper = SerperClient(settings.serper_api_key, settings.serper_timeout) if settings.serper_api_key else None
+    app.state.serper = SerperClient(settings.serper_api_key, settings.serper_timeout, ROOT / "storage" / "internet_cache.sqlite3") if settings.serper_api_key else None
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "[::1]", "testserver"])
 
     @app.middleware("http")
@@ -77,12 +77,11 @@ def create_app(settings: Settings | None = None, database=None):
             raise HTTPException(503, "Chưa cấu hình PostgreSQL. Điền .env theo .env.example rồi khởi động lại web.")
         return database
 
-    def reference_rows(session):
-        rows = session.execute(
-            select(Chunk, Document.filename).join(Document, Chunk.document_id == Document.id)
-            .where(Document.role == "reference").order_by(Document.id, Chunk.ordinal)
-            .limit(settings.max_reference_chunks + 1)
-        ).all()
+    def reference_rows(session, exclude_hash=None):
+        statement = select(Chunk, Document.filename).join(Document, Chunk.document_id == Document.id).where(Document.role == "reference")
+        if exclude_hash:
+            statement = statement.where(Document.sha256 != exclude_hash)
+        rows = session.execute(statement.order_by(Document.id, Chunk.ordinal).limit(settings.max_reference_chunks + 1)).all()
         if len(rows) > settings.max_reference_chunks:
             raise HTTPException(409, "Kho vượt giới hạn bản thử nghiệm. Cần tăng giới hạn hoặc nâng cấp cơ chế lập chỉ mục.")
         return [{"id": chunk.id, "ordinal": chunk.ordinal, "text": chunk.text, "location": chunk.location, "document_id": chunk.document_id, "filename": name} for chunk, name in rows]
@@ -103,8 +102,8 @@ def create_app(settings: Settings | None = None, database=None):
             if suffix not in {".pdf", ".docx"}:
                 raise HTTPException(415, "Chỉ hỗ trợ PDF và DOCX.")
             with db.session() as session:
-                references = reference_rows(session) if role == "submission" else []
-                if role == "submission" and not references:
+                references = []
+                if role == "submission" and not session.scalar(select(Document.id).where(Document.role == "reference").limit(1)):
                     raise HTTPException(409, "Kho tham chiếu đang trống. Hãy thêm ít nhất một tài liệu nguồn trước khi kiểm tra.")
                 settings.upload_dir.mkdir(parents=True, exist_ok=True)
                 stored_name = f"{uuid4()}{suffix}"
@@ -120,6 +119,10 @@ def create_app(settings: Settings | None = None, database=None):
                 digest = file_hash(saved_path)
                 if role == "reference" and session.scalar(select(Document.id).where(Document.reference_hash == digest)):
                     raise HTTPException(409, "Tài liệu này đã có trong kho tham chiếu, kể cả khi đổi tên tệp.")
+                self_reference = None
+                if role == "submission":
+                    self_reference = session.scalar(select(Document.id).where(Document.role == "reference", Document.sha256 == digest))
+                    references = reference_rows(session, exclude_hash=digest)
                 extracted = extract_chunks(saved_path, settings)
                 if role == "reference":
                     count = session.scalar(select(func.count(Chunk.id)).join(Document).where(Document.role == "reference")) or 0
@@ -142,9 +145,9 @@ def create_app(settings: Settings | None = None, database=None):
                     eligible_references, ignored_references = filter_chunks(references)
                     if not queries:
                         raise HTTPException(422, "Tài liệu chỉ chứa mục lục, tài liệu tham khảo hoặc nội dung mẫu; không còn đoạn phù hợp để kiểm tra.")
-                    if not eligible_references:
+                    if not eligible_references and not self_reference:
                         raise HTTPException(409, "Kho nguồn không còn đoạn phù hợp sau khi loại mục lục, tài liệu tham khảo và nội dung mẫu.")
-                    rankings = checker.search(queries, eligible_references, engine)
+                    rankings = checker.search(queries, eligible_references, engine) if eligible_references else [[] for _ in queries]
                     configured_threshold = settings.semantic_threshold if engine == "semantic" else settings.lexical_threshold
                     result = make_report(
                         document, queries, eligible_references, rankings, engine, threshold,
@@ -156,9 +159,33 @@ def create_app(settings: Settings | None = None, database=None):
                         max_alerts=settings.max_alerts_per_report,
                         max_per_source=settings.max_alerts_per_source,
                     )
+                    result["excluded_self_document_ids"] = [self_reference] if self_reference else []
+                    if self_reference:
+                        result["warnings"] = [*result["warnings"], "Đã bỏ qua bản của chính tệp này trong kho tham chiếu (xác định theo nội dung tệp, kể cả khi đổi tên)."]
+                        if not eligible_references:
+                            result["warnings"].append("Không còn nguồn nội bộ phù hợp để đối chiếu sau khi loại chính tệp này; kết quả nội bộ 0% không xác nhận báo cáo không trùng. Có thể tiếp tục kiểm tra Internet.")
                     result["chunk_chars"] = settings.chunk_chars
                     result["elapsed_seconds"] = round(perf_counter() - started, 3)
                     result["internet_search"] = search_state(queries, None, app.state.serper is not None, settings.serper_max_queries)
+                    # Archive only after comparing against the pre-upload corpus.
+                    existing = session.scalar(select(Document.id).where(Document.reference_hash == digest))
+                    if existing:
+                        result["reference_archive"] = {"status": "existing", "document_id": existing}
+                    else:
+                        corpus_size = session.scalar(select(func.count(Chunk.id)).join(Document).where(Document.role == "reference")) or 0
+                        if corpus_size + len(document.chunks) > settings.max_reference_chunks:
+                            result["reference_archive"] = {"status": "capacity_reached"}
+                            result["warnings"] = [*result["warnings"], "Đã lưu kết quả kiểm tra nhưng chưa thêm báo cáo vào kho tham chiếu vì kho đã đạt giới hạn số đoạn."]
+                        else:
+                            archived = Document(
+                                id=str(uuid4()), filename=name, file_type=document.file_type, role="reference",
+                                sha256=digest, reference_hash=digest, stored_name=stored_name,
+                                size_bytes=size, warnings=list(document.warnings),
+                            )
+                            for chunk in document.chunks:
+                                archived.chunks.append(Chunk(id=str(uuid4()), ordinal=chunk.ordinal, text=chunk.text, location=dict(chunk.location)))
+                            session.add(archived)
+                            result["reference_archive"] = {"status": "added", "document_id": archived.id}
                     check_id = str(uuid4())
                     result["id"] = check_id
                     session.add(Check(id=check_id, document_id=document.id, engine=engine, threshold=threshold, coverage=result["coverage"], report=result))

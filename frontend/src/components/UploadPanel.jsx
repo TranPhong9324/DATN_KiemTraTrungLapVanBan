@@ -9,7 +9,7 @@ export default function UploadPanel({ health, ready, busy, onUpload, onError }) 
     catch (error) { setFile(null); if (input.current) input.current.value = ''; onError(error.message); }
   }
   return <section className="panel check-panel">
-    <div className="section-title"><span className="step">01</span><div><h2>Báo cáo cần kiểm tra</h2><p>Báo cáo này không tự thêm vào kho tham chiếu.</p></div></div>
+    <div className="section-title"><span className="step">01</span><div><h2>Báo cáo cần kiểm tra</h2><p>Sau khi kiểm tra thành công, báo cáo tự động được lưu vào kho tham chiếu. Khi nộp lại cùng tệp, hệ thống bỏ qua chính tệp đó trong kho, kể cả khi đổi tên.</p></div></div>
     <form id="check-form" className={busy ? 'busy' : ''} onSubmit={event => { event.preventDefault(); onUpload(file); }}>
       <label className={`dropzone ${dragging ? 'dragging' : ''}`} htmlFor="check-file"
         onDragOver={event => { event.preventDefault(); if (!busy) setDragging(true); }}

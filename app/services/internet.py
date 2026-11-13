@@ -5,6 +5,16 @@ from app.services.checker import cosine, features
 from app.services.serper import SerperError, web_query_from_text
 
 
+def best_web_matches(matches):
+    """Keep the highest-scoring web source per query; ties keep the first."""
+    best = {}
+    for row in matches:
+        key = row.get("query_id")
+        if key not in best or (row.get("web_score") or 0) > (best[key].get("web_score") or 0):
+            best[key] = dict(row)
+    return list(best.values())
+
+
 def report_queries(report):
     return sorted(
         [row for row in report.get("document_chunks", []) if not row.get("ignored")],
@@ -42,7 +52,7 @@ def search_state(queries, previous, enabled, batch_size):
         "skipped_chunks": skipped, "processed_chunks": searched + skipped,
         "pending_chunks": remaining, "complete": enabled and remaining == 0,
         "status": status, "warning": warning, "query_states": states,
-        "queries": searches, "matches": [dict(row) for row in previous.get("matches", [])],
+        "queries": searches, "matches": best_web_matches(previous.get("matches", [])),
         "resumable": bool(queries),
     }
 
@@ -74,6 +84,7 @@ def search_batch(queries, previous, client, settings):
         state["queries"].append({
             "query_id": query["id"], "ordinal": query.get("ordinal", 0),
             "text": query["text"], "phrase": phrase, "result_count": len(payload["organic"]),
+            "cache_hit": payload.get("cache_hit", False),
         })
         state["query_states"][query["id"]] = {"status": "searched"}
         for item in payload["organic"]:

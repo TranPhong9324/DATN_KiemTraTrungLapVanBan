@@ -212,3 +212,8 @@ Trên máy khác có PostgreSQL kiểm thử riêng, đặt `TEST_DATABASE_URL` 
 | Chế độ ngữ nghĩa chưa bật/lỗi | Cài bộ ML, bật cấu hình và kiểm tra model cache; từ vựng vẫn là chế độ riêng |
 | Không có chữ / cần OCR | Dùng PDF có text layer hoặc chuyển OCR trước; không coi đó là 0% trùng |
 | Cổng 8000 đang dùng | Chọn cổng khác ở lệnh uvicorn, ví dụ `--port 8001` |
+
+
+## Tự lưu báo cáo đã kiểm tra vào kho tham chiếu
+
+Sau khi đối chiếu nội bộ thành công, hệ thống tự thêm một bản nguồn của báo cáo vào kho tham chiếu trong cùng giao dịch lưu kết quả. Lần kiểm tra hiện tại sử dụng kho trước khi thêm báo cáo. Những lần kiểm tra sau tự loại nguồn có cùng SHA-256 với tệp đang nộp, kể cả khi đổi tên, để không đối chiếu với chính tệp đó. Nếu chỉ còn chính tệp này trong kho, hệ thống lưu kết quả nội bộ không có nguồn đối chiếu kèm cảnh báo và vẫn cho phép kiểm tra Internet. Nếu nội dung tệp đã có trong kho (SHA-256), hệ thống dùng bản nguồn hiện có và không thêm bản trùng. Tệp gốc được dùng chung cho bản nộp và bản nguồn, các đoạn nguồn có ID riêng. Khi kho đạt giới hạn số đoạn, kết quả kiểm tra vẫn được lưu, kèm cảnh báo chưa thêm báo cáo vào kho. Báo cáo xử lý lỗi không được thêm. Tính năng áp dụng cho lần nộp mới, không tự nhập lại lịch sử cũ.

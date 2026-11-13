@@ -71,11 +71,11 @@ def test_postgres_roundtrip_and_persisted_history(web):
     response = upload(client, "/api/checks", original)
     assert response.status_code == 201, response.text
     report = response.json()
-    assert report["coverage"] == 100
-    assert report["matched_chunks"] == report["total_chunks"]
-    assert report["matches"][0]["source_document_id"] == reference.json()["id"]
+    assert report["coverage"] == 0
+    assert report["matched_chunks"] == 0
+    assert report["matches"] == []
+    assert report["excluded_self_document_ids"] == [reference.json()["id"]]
     assert report["document_id"] != reference.json()["id"]
-    assert report["matches"][0]["source_location"]["page"] is None
     preview = client.get(f'/api/documents/{report["document_id"]}/preview')
     assert preview.status_code == 200
     assert "text/html" in preview.headers["content-type"]
@@ -105,18 +105,30 @@ def test_duplicate_reference_hash_and_same_filename_different_content(web):
     assert client.get("/api/stats").json()["references"] == 2
 
 
-def test_unrelated_report_no_matches_and_no_automatic_reference(web):
+def test_unrelated_report_is_archived_after_comparison_without_self_match(web):
     client, _, _ = web
     upload(client, "/api/references")
     result = upload(client, "/api/checks", make_docx(OTHER)).json()
     assert result["coverage"] == 0
     assert result["matches"] == []
-    assert client.get("/api/stats").json()["references"] == 1
+    assert result["reference_archive"]["status"] == "added"
+    assert client.get("/api/stats").json()["references"] == 2
+    archived_id = result["reference_archive"]["document_id"]
+    assert archived_id not in {source["document_id"] for source in result["sources"]}
+    documents = client.get("/api/documents?role=reference").json()
+    assert any(doc["id"] == archived_id for doc in documents)
+    content = client.get(f"/api/documents/{archived_id}/file").content
+    repeated = upload(client, "/api/checks", content, name="renamed.docx").json()
+    assert repeated["reference_archive"] == {"status": "existing", "document_id": archived_id}
+    assert repeated["coverage"] == 0
+    assert repeated["matches"] == []
+    assert repeated["excluded_self_document_ids"] == [archived_id]
+    assert client.get("/api/stats").json()["references"] == 2
 
 
 def test_multiple_sources_do_not_double_count_coverage(web):
     client, _, _ = web
-    upload(client, "/api/references", make_docx(TEXT), name="a.docx")
+    upload(client, "/api/references", make_docx(TEXT, TEXT), name="a.docx")
     upload(client, "/api/references", make_docx(TEXT, OTHER), name="b.docx")
     result = upload(client, "/api/checks").json()
     assert len(result["sources"]) == 2
@@ -147,8 +159,9 @@ def test_pdf_upload_check_and_download(web):
     content = make_pdf(["Document duplicate checking system"])
     assert upload(client, "/api/references", content, name="source.pdf").status_code == 201
     report = upload(client, "/api/checks", content, name="query.pdf").json()
-    assert report["coverage"] == 100
-    assert report["matches"][0]["query_location"]["page"] == 1
+    assert report["coverage"] == 0
+    assert report["matches"] == []
+    assert report["excluded_self_document_ids"]
     preview = client.get(f'/api/documents/{report["document_id"]}/preview')
     assert preview.status_code == 200
     assert preview.headers["content-type"] == "application/pdf"
@@ -173,7 +186,7 @@ def test_cross_origin_upload_rejected(web):
 
 def test_failed_check_rolls_back_and_removes_file(web, monkeypatch):
     client, app, settings = web
-    upload(client, "/api/references")
+    upload(client, "/api/references", make_docx(TEXT, OTHER))
     from app.services.checker import EngineUnavailable
     def fail(*args):
         raise EngineUnavailable("Model unavailable")
@@ -199,7 +212,7 @@ def test_omitted_engine_and_threshold_follow_configuration(web, monkeypatch):
     # This test verifies API routing/defaults; it does not claim to test the model.
     monkeypatch.setattr(app.state.checker, "search", search)
     with TestClient(app) as client:
-        upload(client, "/api/references")
+        upload(client, "/api/references", make_docx(TEXT, OTHER))
         response = upload(client, "/api/checks")
         assert response.status_code == 201, response.text
         assert selected == ["semantic"]
@@ -263,3 +276,32 @@ def test_internet_error_progress_survives_reload_and_resumes_without_repeating_s
         assert final["internet_search"]["complete"]
         assert len(final["internet_search"]["queries"]) == 3
         assert len(provider.calls) == 4  # Three successes and one failed request.
+
+
+def test_reference_capacity_does_not_discard_successful_check(web):
+    from dataclasses import replace
+    client, original_app, settings = web
+    upload(client, "/api/references")
+    with TestClient(create_app(replace(settings, max_reference_chunks=1), original_app.state.database)) as limited:
+        result = upload(limited, "/api/checks", make_docx(OTHER))
+        assert result.status_code == 201
+        report = result.json()
+        assert report["reference_archive"]["status"] == "capacity_reached"
+        assert report["warnings"]
+        assert limited.get("/api/stats").json()["references"] == 1
+        assert limited.get(f'/api/checks/{report["id"]}').status_code == 200
+
+
+def test_same_file_is_skipped_but_other_sources_are_still_compared(web):
+    client, _, _ = web
+    content = make_docx(TEXT)
+    own = upload(client, "/api/references", content, name="original.docx").json()
+    other = upload(client, "/api/references", make_docx(TEXT, OTHER), name="other.docx").json()
+    report = upload(client, "/api/checks", content, name="renamed.docx").json()
+    assert report["excluded_self_document_ids"] == [own["id"]]
+    assert report["coverage"] == 100
+    assert {match["source_document_id"] for match in report["matches"]} == {other["id"]}
+    own_chunks = {chunk["id"] for chunk in report["document_chunks"]}
+    assert not own_chunks.intersection(report["reference_chunk_ids"])
+    assert report["reference_documents"] == 1
+    assert client.get("/api/stats").json()["references"] == 2

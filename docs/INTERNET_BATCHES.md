@@ -24,3 +24,8 @@
 ## Kiểm chứng
 
 36 test backend/PostgreSQL, 14 test React và 2 test Edge đạt; build thành công. Test tự động tìm sau upload, tạm dừng/tiếp tục, lưu tiến độ, lỗi API và tìm đến đoạn cuối dùng provider/API giả lập.
+
+
+## Local Internet search cache
+
+Successful Serper results (including empty results) are stored in `storage/internet_cache.sqlite3`. Repeated queries reuse this cache across reports and server restarts, without another API call. Keys normalize whitespace, Unicode and case, and include result count, country and language. Similarity is recalculated for each document chunk; only its highest-scoring web source is kept. Errors are not cached. Cached results have no automatic expiry; delete this file while the server is stopped to refresh all searches. Existing report history is unchanged, and reports saved before this feature do not automatically populate the cache.

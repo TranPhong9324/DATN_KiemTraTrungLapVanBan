@@ -37,10 +37,11 @@ function installFetch(batch) {
     throw new Error('Unexpected URL ' + url);
   }));
 }
-beforeEach(() => { calls = []; localStorage.clear(); });
+beforeEach(() => { calls = []; localStorage.clear(); window.history.replaceState(null, '', '/'); });
 
 async function openAndStart() {
   render(<App />);
+  fireEvent.click(screen.getByRole('link', { name: 'Lịch sử kiểm tra' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Xem kết quả' }));
   const button = await screen.findByRole('button', { name: 'Kiểm tra Internet toàn báo cáo' });
   await waitFor(() => expect(button).toBeEnabled());

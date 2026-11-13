@@ -69,3 +69,27 @@ def test_disabled_search_does_not_claim_completion():
     result = search_state(queries(), None, False, 5)
     assert not result["enabled"] and not result["complete"]
     assert result["status"] == "disabled" and result["searched_chunks"] == 0
+
+
+def test_only_highest_scoring_source_is_kept_for_each_chunk():
+    class MultipleSources:
+        def search(self, phrase, **kwargs):
+            return {"organic": [
+                {"title": "Unrelated", "snippet": "oranges bananas", "link": "https://low.example"},
+                {"title": "", "snippet": queries(1)[0]["text"], "link": "https://best.example"},
+                {"title": "Other", "snippet": "oranges", "link": "https://other.example"},
+            ]}
+    result = search_batch(queries(1), None, MultipleSources(), Settings())
+    assert len(result["matches"]) == 1
+    assert result["matches"][0]["link"] == "https://best.example"
+
+
+def test_saved_results_keep_best_source_per_chunk_and_first_on_ties():
+    previous = {"matches": [
+        {"query_id": "q0", "web_score": 0.1},
+        {"query_id": "q1", "web_score": 0.4},
+        {"query_id": "q0", "web_score": 0.8, "title": "Best"},
+        {"query_id": "q0", "web_score": 0.8, "title": "Tie"},
+    ]}
+    result = search_state(queries(2), previous, True, 5)
+    assert result["matches"] == [previous["matches"][2], previous["matches"][1]]

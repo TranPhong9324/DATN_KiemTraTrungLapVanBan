@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.jsx';
-import ReportPanel from './components/ReportPanel.jsx';
+import ReportPanel, { reviewSummary } from './components/ReportPanel.jsx';
 const report = {
   id: 'check-1', document_id: 'submission-1', filename: 'baocao.docx', engine: 'lexical',
   threshold: 0.08, coverage: 100, matched_chunks: 1, total_chunks: 1, sources: [],
@@ -12,6 +12,7 @@ const report = {
 let semantic, uploads;
 beforeEach(() => {
   localStorage.clear();
+  window.history.replaceState(null, '', '/');
   semantic = false; uploads = [];
   vi.stubGlobal('fetch', vi.fn(async (url, options) => {
     let body;
@@ -42,9 +43,10 @@ describe('React workflows', () => {
   });
   it('opens persisted history', async () => {
     render(<App />);
+    fireEvent.click(screen.getByRole('link', { name: 'Lịch sử kiểm tra' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Xem kết quả' }));
     await screen.findByTitle('Bản xem trước baocao.docx');
-    expect(screen.getByRole('button', { name: /Tải kết quả JSON/ })).toBeVisible();
+    expect(screen.queryByRole('button', { name: /Tải kết quả JSON/ })).toBeNull();
   });
   it('shows connection errors and disables upload when offline', async () => {
     fetch.mockRejectedValue(new Error('offline')); render(<App />);
@@ -120,4 +122,74 @@ it('uses the same visible STT on markers, source cards and comparison dialogs', 
   fireEvent.click(screen.getByRole('button', { name: 'Đóng đối chiếu' }));
   fireEvent.change(screen.getByLabelText('Sắp xếp kết quả'), { target: { value: 'score' } });
   expect([...container.querySelectorAll('.document-marker')].map(item => item.textContent)).toEqual(['1', '2']);
+});
+
+
+it('summarizes internal and Internet coverage by character length without double counting', () => {
+  const chunks = [
+    { id: 'a', text: '1234' }, { id: 'b', text: '123456' },
+    { id: 'c', text: '1234567890' }, { id: 'ignored', text: 'ignored', ignored: true },
+  ];
+  const results = [
+    { type: 'internal', queryIds: ['a'] },
+    { type: 'web', queryIds: ['a'], candidate: true },
+    { type: 'web', queryIds: ['b'], candidate: true },
+    { type: 'web', queryIds: ['c'], candidate: false },
+    { type: 'web', queryIds: ['ignored'], candidate: true },
+  ];
+  expect(reviewSummary({ document_chunks: chunks, eligible_chunks: 3 }, chunks, results))
+    .toEqual({ coverage: 50, matched: 2, eligible: 3, internal: 1, internet: 2 });
+});
+
+it('shows Internet-only alerts in the summary even when internal coverage is zero', () => {
+  const { container } = render(<ReportPanel report={{ ...report, coverage: 0, matched_chunks: 0, matches: [],
+    document_chunks: [{ ...report.document_chunks[0], max_score: 0, alert_numbers: [] }] }} />);
+  const summary = container.querySelector('.review-summary');
+  expect(summary).toHaveTextContent('100%');
+  expect(summary).toHaveTextContent('1 / 1 đoạn có cảnh báo');
+  expect(summary).toHaveTextContent('Nội bộ: 0 đoạn · Internet: 1 đoạn');
+});
+
+
+it('separates checking, history and reference pages with navigation', async () => {
+  render(<App />);
+  await screen.findByText('PostgreSQL đã kết nối');
+  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Báo cáo cần kiểm tra');
+  expect(screen.getByRole('button', { name: /Kiểm tra báo cáo/ })).toBeVisible();
+  expect(screen.queryByRole('button', { name: 'Xem kết quả' })).toBeNull();
+  fireEvent.click(screen.getByRole('link', { name: 'Kho tham chiếu' }));
+  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Kho tham chiếu');
+  expect(screen.getByLabelText('Chọn tài liệu nguồn')).toBeVisible();
+  expect(screen.queryByRole('button', { name: /Kiểm tra báo cáo/ })).toBeNull();
+  fireEvent.click(screen.getByRole('link', { name: 'Lịch sử kiểm tra' }));
+  expect(await screen.findByRole('button', { name: 'Xem kết quả' })).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Xem kết quả' }));
+  await screen.findByTitle('Bản xem trước baocao.docx');
+  expect(screen.getByRole('link', { name: 'Báo cáo cần kiểm tra' })).toHaveAttribute('aria-current', 'page');
+});
+
+
+it('numbers each chunk-source pair separately when an internal group overlaps Internet results', () => {
+  const combined = {
+    ...report,
+    document_chunks: [
+      { id: 'q1', ordinal: 0, text: 'Đoạn thứ nhất', max_score: 1 },
+      { id: 'q2', ordinal: 1, text: 'Đoạn thứ hai', max_score: 1 },
+    ],
+    matches: [{ ...report.matches[0], query_chunk_ids: ['q1', 'q2'], query_ordinals: [0, 1] }],
+    internet_search: { matches: [
+      { query_id: 'q1', query_ordinal: 0, candidate: true, web_score: 0.8, title: 'Web một' },
+      { query_id: 'q2', query_ordinal: 1, candidate: true, web_score: 0.7, title: 'Web hai' },
+    ] },
+  };
+  const { container } = render(<ReportPanel report={combined} />);
+  expect([...container.querySelectorAll('.document-block')].map(block => [...block.querySelectorAll('.document-marker')].map(marker => marker.textContent)))
+    .toEqual([['1', '2'], ['3', '4']]);
+  expect([...container.querySelectorAll('.alert-number')].map(item => item.textContent)).toEqual(['1', '2', '3', '4']);
+  fireEvent.click(screen.getByRole('button', { name: 'Mở cảnh báo 3' }));
+  expect(container.querySelector('.comparison-number')).toHaveTextContent('3');
+  expect(container.querySelector('.comparison-query')).toHaveTextContent('Đoạn thứ hai');
+  fireEvent.click(screen.getByRole('button', { name: 'Đóng đối chiếu' }));
+  fireEvent.change(screen.getByLabelText('Sắp xếp kết quả'), { target: { value: 'score' } });
+  expect([...container.querySelectorAll('.document-marker')].map(item => item.textContent)).toEqual(['1', '2', '3', '4']);
 });
