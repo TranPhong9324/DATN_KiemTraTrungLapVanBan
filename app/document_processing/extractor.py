@@ -100,7 +100,7 @@ if __name__ == "__main__":
     import json
 
     if len(sys.argv) != 2:
-        print("Cách dùng: python extractor.py <đường_dẫn_file.pdf|.docx>")
+        print("Cách dùng: python -m app.document_processing.extractor <đường_dẫn_file.pdf|.docx>")
         sys.exit(1)
 
     res = extract(sys.argv[1])

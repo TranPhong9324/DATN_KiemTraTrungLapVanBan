@@ -21,8 +21,8 @@ import re
 import time
 from pathlib import Path
 
-from app.services.checker import cosine, features, shares_phrase
-from app.services.shingles import ShingleIndex, covered_words, tokenize
+from app.services.matching.checker import cosine, features, shares_phrase
+from app.services.matching.shingles import ShingleIndex, covered_words, tokenize
 
 ROOT = Path(__file__).resolve().parent.parent
 SEED = 20261120

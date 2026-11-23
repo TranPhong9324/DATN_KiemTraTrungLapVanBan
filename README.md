@@ -1,8 +1,21 @@
-# Hệ thống kiểm tra và cảnh báo trùng lặp báo cáo đồ án
+# Hệ thống kiểm tra và cảnh báo trùng lặp nội dung tài liệu
 
 ## Web tải tài liệu và kiểm tra trùng lặp
 
 Đã có bản web cục bộ: thêm PDF/DOCX vào kho tham chiếu, tải báo cáo để kiểm tra, xem đoạn đối chiếu và lưu lịch sử trong PostgreSQL.
+
+Repository: https://github.com/TranPhong9324/DATN_KiemTraTrungLap
+
+### Cài đặt nhanh
+
+```powershell
+git clone https://github.com/TranPhong9324/DATN_KiemTraTrungLap.git
+cd DATN_KiemTraTrungLap
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements-web.txt
+```
 
 **Hướng dẫn đầy đủ:** [Chạy web và kết nối PostgreSQL](docs/WEB_POSTGRESQL.md).
 
@@ -15,6 +28,8 @@
 ```
 
 Mở **http://127.0.0.1:8000**. Mặc định dùng so khớp từ vựng; ngữ nghĩa SBERT/FAISS là chế độ tùy chọn cần cài thêm bộ ML và bật cấu hình. PDF scan được nối với Tesseract OCR; cần cài Tesseract và `vie.traineddata` theo `docs/OCR_PDF.md`. Web có trang chủ công khai (đăng nhập/đăng ký) và 2 vai trò (người dùng / quản trị). Có `SERPER_API_KEY` thì hệ thống tìm thêm nguồn Internet, tải toàn văn các trang nghi vấn và tự lưu vào PostgreSQL để dùng lại (xem `docs/WEB_SOURCE_API.md`): đặt `JWT_SECRET` trong `.env`, chạy `python -m app.db init`, tạo quản trị đầu tiên bằng `python -m app.db create-user --email ... --name ... --role admin`. Chi tiết: [Xác thực và phân quyền](docs/PHAN_QUYEN.md). Bản này vẫn chỉ phục vụ thử nghiệm cục bộ.
+
+Để chạy semantic matching, cài thêm `requirements.txt`. Không commit `.env`, mật khẩu PostgreSQL, khóa JWT hoặc API key.
 
 ## Kế hoạch triển khai và tiếp tục với AI
 
@@ -29,14 +44,36 @@ tương ứng với mốc **"Xây chức năng tách/trích PDF-DOCX, tiền x�
 
 ## Cấu trúc
 
+```text
+Checking-and-alerting-duplicate-content-in-documents-main/
+├── app/                     # Backend FastAPI
+│   ├── main.py              # Khởi tạo ứng dụng và khai báo API
+│   ├── config.py            # Cấu hình môi trường
+│   ├── db.py, models.py      # Kết nối PostgreSQL và mô hình dữ liệu
+│   ├── auth.py, security.py, permissions.py
+│   ├── services/
+│   │   ├── document/        # Trích xuất tài liệu, OCR và xem trước
+│   │   ├── matching/        # Đối chiếu nội dung và tạo kết quả
+│   │   └── web/             # Tìm kiếm và lưu nguồn Internet
+│   └── document_processing/     # Công cụ xử lý độc lập, không cần chạy web
+│       ├── extractor.py
+│       ├── preprocessor.py
+│       ├── pipeline.py           # Xử lý hàng loạt và xuất JSON
+│       └── vector_store.py       # Embedding SBERT và tìm kiếm FAISS
+├── frontend/
+│   ├── index.html            # Trang web do FastAPI phục vụ
+│   ├── static/               # JavaScript, CSS và phông chữ tại /static/
+│   ├── src/                  # Mã nguồn React
+│   └── public/               # Tài nguyên tĩnh của Vite
+├── storage/                 # Tệp tải lên và bản xem trước của web
+├── evaluation/              # Dữ liệu và chương trình đánh giá
+├── tests/                   # Kiểm thử backend
+├── scripts/                 # Khởi chạy web và kiểm thử PostgreSQL
+├── tessdata/                 # Dữ liệu ngôn ngữ cho Tesseract
+└── docs/                    # Hướng dẫn và tài liệu dự án
 ```
-plagiarism_system/
-├── extractor.py      # Trích xuất text thô từ PDF (pdfplumber) và DOCX (python-docx)
-├── preprocessor.py   # Chuẩn hóa Unicode, làm sạch, tách câu, tách từ tiếng Việt, chia chunk
-├── pipeline.py        # Điều phối: quét thư mục -> trích xuất -> tiền xử lý -> xuất JSON
-├── requirements.txt
-└── data/reports/      # (thư mục chứa file PDF/DOCX cần kiểm tra)
-```
+
+Dữ liệu cục bộ của CLI dùng `Data/`, `request/` và các tệp chỉ mục FAISS ở thư mục gốc. `.env.example` là mẫu cấu hình cho `.env`.
 
 ## Cài đặt
 
@@ -47,10 +84,10 @@ pip install -r requirements.txt
 ## Cách chạy
 
 ```bash
-python pipeline.py <thư_mục_chứa_file_pdf_docx> <đường_dẫn_json_đầu_ra>
+python -m app.document_processing.pipeline <thư_mục_chứa_file_pdf_docx> <đường_dẫn_json_đầu_ra>
 
 # Ví dụ:
-python pipeline.py ./data/reports ./output/chunks.json
+python -m app.document_processing.pipeline ./Data/file_xu_ly ./output/chunks.json
 ```
 
 Kết quả: file `chunks.json` chứa danh sách các đoạn văn bản (chunk) đã được:
@@ -62,33 +99,6 @@ Kết quả: file `chunks.json` chứa danh sách các đoạn văn bản (chunk
 
 Mỗi file cũng chạy độc lập để test/debug nhanh:
 ```bash
-python extractor.py file.pdf
-python preprocessor.py file.docx
+python -m app.document_processing.extractor file.pdf
+python -m app.document_processing.preprocessor file.docx
 ```
-
-## Vì sao thiết kế như vậy?
-
-- **Giữ số trang / vị trí (`page`, `chunk_id`)**: để khi phát hiện trùng lặp, hệ thống
-  chỉ đúng vị trí trong tài liệu gốc — cần thiết cho báo cáo cảnh báo ở giai đoạn sau.
-- **Tách riêng `raw_text` và `tokenized_text`**: `tokenized_text` (đã tách từ) dùng cho
-  các phương pháp dựa trên từ (TF-IDF, n-gram, Winnowing); `raw_text` giữ nguyên để hiển
-  thị lại cho người dùng trong giao diện báo cáo.
-- **Chunk theo `max_chars` (mặc định 500)**: đơn vị so sánh không quá dài (mất độ chính xác
-  embedding) và không quá ngắn (mất ngữ cảnh) — tham số này bạn có thể tinh chỉnh khi
-  đánh giá ở giai đoạn 8 (đánh giá chỉ số/hiệu năng).
-- **OCR PDF scan/hỗn hợp**: giữ text layer và chỉ gọi Tesseract cho trang không đọc được chữ; lưu phương pháp trích xuất và lỗi theo trang.
-
-## Bước tiếp theo (giai đoạn 14/09 – 20/09)
-
-`chunks.json` sinh ra từ module này chính là input cho bước **vector hóa bằng PhoBERT/SBERT**
-và **xây kho vector (FAISS/Qdrant)**. Mỗi chunk sẽ được encode thành 1 vector embedding,
-lưu kèm `chunk_id` để truy vết ngược lại văn bản gốc khi tìm được đoạn tương đồng.
-
-Gợi ý bước kế tiếp:
-1. Load `chunks.json`
-2. Dùng model PhoBERT/SBERT tiếng Việt để encode `tokenized_text` (hoặc `raw_text` nếu dùng
-   model dạng SentenceTransformer đã tự tokenize) thành vector
-3. Lưu vector + metadata vào FAISS index
-4. Viết hàm `search(query_chunk, top_k)` trả về các chunk tương đồng nhất kèm điểm cosine similarity
-
-Mình có thể xây tiếp phần này khi bạn sẵn sàng.

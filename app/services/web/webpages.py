@@ -25,7 +25,7 @@ import unicodedata
 
 import requests
 
-from app.services.documents import DocumentError, extract_chunks, normalize, split_block, validate_file
+from app.services.document.documents import DocumentError, extract_chunks, normalize, split_block, validate_file
 
 logger = logging.getLogger(__name__)
 MAX_REDIRECTS = 4
@@ -359,14 +359,14 @@ def fetch_pages(urls: list[str], settings, workers: int = 4, **kwargs) -> dict[s
         return dict(zip(urls, pool.map(one, urls)))
 
 
-if __name__ == "__main__":  # chẩn đoán: python -m app.services.webpages <địa chỉ>  -> in lỗi đầy đủ hoặc tóm tắt nội dung tải được
+if __name__ == "__main__":  # chẩn đoán: python -m app.services.web.webpages <địa chỉ>  -> in lỗi đầy đủ hoặc tóm tắt nội dung tải được
     import sys
     import traceback
 
     from app.config import Settings
 
     if len(sys.argv) != 2:
-        raise SystemExit("Cách dùng: python -m app.services.webpages https://trang-can-thu/")
+        raise SystemExit("Cách dùng: python -m app.services.web.webpages https://trang-can-thu/")
     try:
         page = fetch_page(sys.argv[1], Settings.load())
     except WebFetchError as error:

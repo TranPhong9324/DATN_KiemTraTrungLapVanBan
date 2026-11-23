@@ -224,21 +224,21 @@ Chạy tại thư mục gốc dự án, trong môi trường đã cài `requirem
 
 ```powershell
 # Trích xuất một tài liệu hiện có, chỉ in kết quả
-python extractor.py "Data/file_dxl/01. HDUQ.pdf"
+python -m app.document_processing.extractor "Data/file_dxl/01. HDUQ.pdf"
 
 # Tìm kiếm trên kho đã lưu, dùng câu truy vấn đã chuẩn bị
-python vector_store.py search "câu truy vấn đã chuẩn bị"
+python -m app.document_processing.vector_store search "câu truy vấn đã chuẩn bị"
 ```
 
 Để demo luồng batch, tạo thư mục riêng `demo_input`, đặt bản sao tài liệu thử vào đó và chạy:
 
 ```powershell
-python pipeline.py demo_input demo_output/chunks.json
+python -m app.document_processing.pipeline demo_input demo_output/chunks.json
 ```
 
-Lệnh batch này xuất JSON riêng. Nó không tự lập lại kho FAISS. Lệnh `python vector_store.py build` đọc `request/pdf` và `request/word`, rồi ghi lại kho mặc định, vì vậy chỉ chạy khi đã chuẩn bị đúng bộ dữ liệu nguồn.
+Lệnh batch này xuất JSON riêng. Nó không tự lập lại kho FAISS. Lệnh `python -m app.document_processing.vector_store build` đọc `request/pdf` và `request/word`, rồi ghi lại kho mặc định, vì vậy chỉ chạy khi đã chuẩn bị đúng bộ dữ liệu nguồn.
 
-Chế độ `python pipeline.py --watch` quét thư mục đầu vào **một lần** và chuyển các tệp đã xử lý sang `Data/file_dxl`. Đây chưa phải dịch vụ theo dõi liên tục.
+Chế độ `python -m app.document_processing.pipeline --watch` quét thư mục đầu vào **một lần** và chuyển các tệp đã xử lý sang `Data/file_dxl`. Đây chưa phải dịch vụ theo dõi liên tục.
 
 ## Chuẩn bị tình huống demo
 

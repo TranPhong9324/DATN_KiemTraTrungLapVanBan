@@ -2,12 +2,12 @@
 Có 2 cách dùng:
 
 1) BATCH THỦ CÔNG (dùng thư mục bất kỳ, giữ tương thích với script cũ):
-       python pipeline.py <thư_mục_chứa_file> <file_json_đầu_ra>
+       python -m app.document_processing.pipeline <thư_mục_chứa_file> <file_json_đầu_ra>
 
 2) QUY TRÌNH THEO CẤU TRÚC DỰ ÁN (khuyến nghị dùng cho DATN):
    Thả file PDF/DOCX mới cần xử lý vào  Data/file_xu_ly/
    Chạy:
-       python pipeline.py --watch
+       python -m app.document_processing.pipeline --watch
    Với mỗi file trong Data/file_xu_ly/, hệ thống sẽ:
      - Trích xuất + tiền xử lý -> lưu file .json kết quả vào
        request/pdf/  (nếu là PDF) hoặc request/word/ (nếu là DOCX)
@@ -22,13 +22,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
 
-from extractor import extract
-from preprocessor import process_extraction
+from app.document_processing.extractor import extract
+from app.document_processing.preprocessor import process_extraction
 
 SUPPORTED_EXTENSIONS = {".pdf", ".docx"}
 
 # --- Cấu trúc thư mục cố định của dự án DATN ---
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parents[2]
 DATA_DIR = BASE_DIR / "Data"
 INPUT_DIR = DATA_DIR / "file_xu_ly"      # nơi thả file MỚI cần xử lý
 PROCESSED_DIR = DATA_DIR / "file_dxl"    # nơi lưu file GỐC sau khi đã trích xuất (đã xử lý)
@@ -100,7 +100,7 @@ def process_single_file(file_path: Path, chunk_max_chars: int = 500) -> Dict:
 def watch_and_process(chunk_max_chars: int = 500) -> Dict:
     """
     Quét thư mục Data/file_xu_ly một lần, xử lý toàn bộ file PDF/DOCX đang có
-    trong đó. Gọi hàm này (hoặc chạy `python pipeline.py --watch`) mỗi khi
+    trong đó. Gọi hàm này (hoặc chạy `python -m app.document_processing.pipeline --watch`) mỗi khi
     có file mới được thêm vào Data/file_xu_ly.
     """
     INPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -171,10 +171,10 @@ def run_pipeline(input_dir: str, output_file: str, chunk_max_chars: int = 500) -
 def _print_help():
     print(
         "Cách dùng:\n"
-        "  python pipeline.py --watch\n"
+        "  python -m app.document_processing.pipeline --watch\n"
         "      Xử lý toàn bộ file mới trong Data/file_xu_ly/, lưu kết quả vào\n"
         "      request/pdf hoặc request/word, và chuyển file gốc sang Data/file_dxl/.\n\n"
-        "  python pipeline.py <thư_mục_input> <file_json_output>\n"
+        "  python -m app.document_processing.pipeline <thư_mục_input> <file_json_output>\n"
         "      (Chế độ cũ) Gom kết quả trích xuất của cả thư mục vào 1 file JSON duy nhất.\n"
     )
 

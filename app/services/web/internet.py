@@ -1,8 +1,8 @@
 """Resumable Internet search in document order."""
 from time import perf_counter
 
-from app.services.checker import cosine, features
-from app.services.serper import SerperError, web_query_from_text
+from app.services.matching.checker import cosine, features
+from app.services.web.serper import SerperError, web_query_from_text
 
 
 def best_web_matches(matches):

@@ -1,6 +1,6 @@
 from app.config import Settings
-from app.services.internet import search_batch, search_state
-from app.services.serper import SerperError, web_query_from_text
+from app.services.web.internet import search_batch, search_state
+from app.services.web.serper import SerperError, web_query_from_text
 
 
 def queries(count=7):

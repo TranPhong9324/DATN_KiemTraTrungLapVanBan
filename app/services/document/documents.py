@@ -105,7 +105,7 @@ def extract_chunks(path: Path, settings: Settings, ocr_engine=None) -> Extracted
                             warnings.append(f"Trang {number} bị bỏ qua vì vượt giới hạn {settings.max_ocr_pages} trang OCR.")
                             continue
                         if ocr_engine is None:
-                            from app.services.ocr import TesseractOCR
+                            from app.services.document.ocr import TesseractOCR
                             ocr_engine = TesseractOCR(settings.tesseract_cmd, settings.ocr_language, settings.ocr_page_timeout)
                         ocr_pages += 1
                         try:
@@ -117,7 +117,7 @@ def extract_chunks(path: Path, settings: Settings, ocr_engine=None) -> Extracted
                             else:
                                 warnings.append(f"Trang {number} OCR không nhận dạng được văn bản.")
                         except Exception as error:
-                            from app.services.ocr import OCRError, OCRUnavailable
+                            from app.services.document.ocr import OCRError, OCRUnavailable
                             if not isinstance(error, (OCRError, OCRUnavailable)):
                                 raise
                             warnings.append(f"Trang {number} OCR lỗi: {error}")

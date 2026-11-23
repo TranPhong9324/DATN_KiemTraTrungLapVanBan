@@ -229,7 +229,7 @@ Trang chỉ được tải và lưu khi kết quả tìm kiếm **có vẻ là b
 Nếu bài chắc chắn có đoạn chép từ web mà vẫn không có trang nào được lưu, phần tóm tắt kết quả sẽ ghi lý do (không tải được / kho đầy / không có trang nào trùng đủ dài). Với lỗi tải, thử trực tiếp trên máy chủ:
 
 ```powershell
-.\.venv\Scripts\python.exe -m app.services.webpages "https://trang-can-thu/"
+.\.venv\Scripts\python.exe -m app.services.web.webpages "https://trang-can-thu/"
 ```
 
 Lệnh in nội dung tải được hoặc lỗi đầy đủ; lỗi bất ngờ cũng được ghi vào log của máy chủ kèm tên loại lỗi trong thông báo.

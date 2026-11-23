@@ -6,8 +6,8 @@ from sqlalchemy import func, select
 from app.config import Settings
 from app.main import create_app
 from app.models import Check, Document
-from app.services.checker import cosine, features
-from app.services.documents import extract_chunks, split_block
+from app.services.matching.checker import cosine, features
+from app.services.document.documents import extract_chunks, split_block
 from conftest import login, make_docx, make_pdf
 
 TEXT = "Hệ thống tự động kiểm tra và cảnh báo trùng lặp văn bản trong báo cáo đồ án. Nội dung được chia thành từng đoạn để đối chiếu với kho tài liệu tham chiếu."
@@ -173,7 +173,7 @@ def test_cross_origin_upload_rejected(web):
 def test_failed_check_rolls_back_and_removes_file(web, monkeypatch):
     client, app, settings = web
     upload(client, "/api/references")
-    from app.services.checker import EngineUnavailable
+    from app.services.matching.checker import EngineUnavailable
     def fail(*args):
         raise EngineUnavailable("Model unavailable")
     monkeypatch.setattr(app.state.checker, "search", fail)

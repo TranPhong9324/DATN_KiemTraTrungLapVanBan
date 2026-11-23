@@ -7,8 +7,8 @@ import pytest
 from app.config import Settings
 from app.main import create_app
 from app.models import Chunk, Document
-from app.services import web_sources
-from app.services.webpages import (
+from app.services.web import web_sources
+from app.services.web.webpages import (
     WebFetchError, WebPage, assert_public_host, canonical_url, fetch_page, html_to_text, text_to_chunks,
 )
 from conftest import ADMIN_EMAIL, login, make_docx, make_user
@@ -352,7 +352,7 @@ def test_user_still_sees_old_report_after_admin_deletes_the_web_source(net):
 def test_pdf_text_with_nul_control_and_lone_surrogate_is_cleaned_and_checked(net, monkeypatch):
     """PDF có font thiếu bảng ánh xạ hay sinh NUL/ký tự lạ; trước đây làm hỏng việc lưu hoặc trả lỗi 500."""
     from types import SimpleNamespace
-    from app.services import documents
+    from app.services.document import documents
     from conftest import make_pdf
     client, app, _ = net
     add_reference(client)
@@ -449,7 +449,7 @@ def test_stale_cosine_threshold_in_env_is_ignored(monkeypatch):
 
 
 def test_page_wrapped_in_form_and_unclosed_options_still_yield_text():
-    from app.services.webpages import html_to_text
+    from app.services.web.webpages import html_to_text
     body = "Đây là một đoạn văn dài hơn mười từ nằm trong trang web có bọc thẻ form kiểu WebForms. " * 3
     assert len(html_to_text(f"<html><body><form><div><p>{body}</p></div></form></body></html>")[1]) > 100
     page = f"<nav><select><option>a<option>b</select></nav><p>{body}</p><footer><p>{'chân trang không lấy vì thuộc phần cuối của trang web này ' * 2}</p></footer>"
@@ -458,7 +458,7 @@ def test_page_wrapped_in_form_and_unclosed_options_still_yield_text():
 
 
 def test_unexpected_fetch_error_is_logged_and_names_the_exception(caplog, monkeypatch):
-    from app.services import webpages
+    from app.services.web import webpages
     def boom(url, settings, **kwargs):
         raise UnicodeError("x")
     monkeypatch.setattr(webpages, "fetch_page", boom)

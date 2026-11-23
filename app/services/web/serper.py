@@ -75,7 +75,7 @@ def web_query_from_text(text: str) -> str | None:
 
     Đầu đoạn thường là câu dẫn ("Trong chương này, chúng ta sẽ...") nên tìm kiếm trả về trang không liên quan; cửa sổ
     nhiều danh từ/thuật ngữ nhất dễ trùng đúng trang gốc. Cụm đủ ngắn để bản sao hơi khác vẫn tìm được."""
-    from app.services.shingles import STOPWORDS
+    from app.services.matching.shingles import STOPWORDS
 
     words = re.findall(r"\w+", text or "", flags=re.UNICODE)
     if len(words) < 10:

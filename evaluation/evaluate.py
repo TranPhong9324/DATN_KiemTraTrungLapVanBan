@@ -9,7 +9,7 @@ import json
 import sys
 from collections import Counter
 from pathlib import Path
-from app.services.checker import cosine, features
+from app.services.matching.checker import cosine, features
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -48,14 +48,14 @@ def select_threshold(labels: list[int], scores: list[float]) -> dict:
 
 
 def prepare_semantic(text: str) -> str:
-    from preprocessor import clean_text, normalize_unicode, tokenize_words
+    from app.document_processing.preprocessor import clean_text, normalize_unicode, tokenize_words
     return tokenize_words(clean_text(normalize_unicode(text)))
 
 
 def pair_scores(pairs: list[dict], engine: str, model_name: str) -> list[float]:
     if engine == "lexical":
         return [float(cosine(features(row["query"]), features(row["candidate"]))) for row in pairs]
-    from vector_store import VectorStore
+    from app.document_processing.vector_store import VectorStore
     store = VectorStore(model_name=model_name, local_files_only=True)
     texts = [prepare_semantic(row[key]) for row in pairs for key in ("query", "candidate")]
     vectors = store.encode(texts)
@@ -77,7 +77,7 @@ def recall_at_k(rankings: list[list[str]], relevant: list[set[str]], values=(1, 
 
 def retrieval_scores(corpus: list[dict], queries: list[dict], model_name: str) -> dict:
     lexical = [ranked_lexical(row["text"], corpus) for row in queries]
-    from vector_store import VectorStore
+    from app.document_processing.vector_store import VectorStore
     store = VectorStore(model_name=model_name, local_files_only=True)
     store.add_chunks([
         {"chunk_id": row["id"], "tokenized_text": prepare_semantic(row["text"]), "text": row["text"]}

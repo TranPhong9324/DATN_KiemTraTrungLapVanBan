@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from app.services.preview import render_docx_html
+from app.services.document.preview import render_docx_html
 from conftest import make_docx
 
 

@@ -1,6 +1,6 @@
 from app.config import Settings
-from app.services.checker import Checker, make_report
-from app.services.shingles import ShingleIndex, covered_words, tokenize
+from app.services.matching.checker import Checker, make_report
+from app.services.matching.shingles import ShingleIndex, covered_words, tokenize
 
 SOURCE = "Hợp đồng chuyển nhượng quyền sử dụng đất phải được lập thành văn bản và công chứng theo quy định của pháp luật hiện hành"
 
@@ -92,7 +92,7 @@ def test_partial_copy_flagged_even_when_chunk_is_mostly_original():
 
 
 def test_web_query_uses_most_distinctive_window_not_the_opening():
-    from app.services.serper import web_query_from_text
+    from app.services.web.serper import web_query_from_text
     text = ("Trong phần này chúng ta sẽ cùng nhau xem xét một số vấn đề như sau: thuật toán băm cụm từ liên tiếp dựng chỉ mục ngược "
             "giúp tăng tốc độ phát hiện trùng lặp văn bản")
     phrase = web_query_from_text(text)

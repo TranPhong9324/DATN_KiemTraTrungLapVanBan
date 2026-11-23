@@ -18,8 +18,8 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.models import Chunk, Document
-from app.services.documents import clean_extracted_text
-from app.services.webpages import WebFetchError, canonical_url, fetch_pages
+from app.services.document.documents import clean_extracted_text
+from app.services.web.webpages import WebFetchError, canonical_url, fetch_pages
 
 logger = logging.getLogger(__name__)
 MAX_URL_BYTES = 2000  # chỉ mục duy nhất của PostgreSQL không nhận khóa quá lớn

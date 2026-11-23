@@ -1,8 +1,8 @@
 import pytest
 
 from app.config import Settings
-from app.services.documents import DocumentError, extract_chunks
-from app.services.ocr import OCRError
+from app.services.document.documents import DocumentError, extract_chunks
+from app.services.document.ocr import OCRError
 from conftest import make_pdf
 
 

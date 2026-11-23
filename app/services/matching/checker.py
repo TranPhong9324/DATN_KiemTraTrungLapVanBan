@@ -4,8 +4,8 @@ from math import sqrt
 from threading import Lock
 import re
 
-from app.services.documents import normalize
-from app.services.shingles import NGRAM, ShingleIndex, covered_words, tokenize
+from app.services.document.documents import normalize
+from app.services.matching.shingles import NGRAM, ShingleIndex, covered_words, tokenize
 
 
 class EngineUnavailable(RuntimeError):
@@ -113,8 +113,8 @@ class Checker:
             raise EngineUnavailable("Chế độ ngữ nghĩa chưa bật. Cài requirements.txt, đặt ENABLE_SEMANTIC=true trong .env và khởi động lại web.")
         with self._lock:
             try:
-                from vector_store import VectorStore
-                from preprocessor import normalize_unicode, clean_text, tokenize_words
+                from app.document_processing.vector_store import VectorStore
+                from app.document_processing.preprocessor import normalize_unicode, clean_text, tokenize_words
 
                 def prepare(text):
                     return tokenize_words(clean_text(normalize_unicode(text)))

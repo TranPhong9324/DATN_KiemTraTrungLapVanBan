@@ -51,7 +51,7 @@ else:
         SentenceTransformer = None  # type: ignore[assignment]
         _ST_IMPORT_ERROR = exc
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parents[2]
 
 
 def resolve_project_path(path: str | Path) -> str:
@@ -274,11 +274,11 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Cách dùng:")
         print("  1) Xây kho vector từ request/pdf và request/word, lưu xuống đĩa:")
-        print("       python vector_store.py build")
+        print("       python -m app.document_processing.vector_store build")
         print("  2) Xây kho vector rồi tìm thử ngay 1 câu truy vấn:")
-        print('       python vector_store.py build "câu truy vấn thử"')
+        print('       python -m app.document_processing.vector_store build "câu truy vấn thử"')
         print("  3) Chỉ tìm kiếm trên kho vector đã lưu sẵn (không xây lại):")
-        print('       python vector_store.py search "câu truy vấn thử"')
+        print('       python -m app.document_processing.vector_store search "câu truy vấn thử"')
         sys.exit(1)
 
     command = sys.argv[1]
@@ -295,7 +295,7 @@ if __name__ == "__main__":
 
     elif command == "search":
         if len(sys.argv) < 3:
-            print("Cần truyền câu truy vấn. Ví dụ: python vector_store.py search \"...\"")
+            print("Cần truyền câu truy vấn. Ví dụ: python -m app.document_processing.vector_store search \"...\"")
             sys.exit(1)
         store = VectorStore.load(index_path, metadata_path)
         query = sys.argv[2]

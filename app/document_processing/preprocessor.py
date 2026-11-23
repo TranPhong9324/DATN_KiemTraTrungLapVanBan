@@ -140,10 +140,10 @@ def process_extraction(extraction_result, chunk_max_chars: int = 500) -> List[Te
 if __name__ == "__main__":
     import sys
     import json
-    from extractor import extract
+    from app.document_processing.extractor import extract
 
     if len(sys.argv) != 2:
-        print("Cách dùng: python preprocessor.py <đường_dẫn_file.pdf|.docx>")
+        print("Cách dùng: python -m app.document_processing.preprocessor <đường_dẫn_file.pdf|.docx>")
         sys.exit(1)
 
     extraction = extract(sys.argv[1])

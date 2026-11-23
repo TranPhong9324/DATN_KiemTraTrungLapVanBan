@@ -21,11 +21,11 @@ from app.auth import build_router, current_user, require_roles
 from app.models import Check, Chunk, Document, User
 from app.permissions import can_view_document, document_visibility, may_read_reference, redact_report
 from app.security import LoginLimiter
-from app.services.checker import Checker, EngineUnavailable, filter_chunks, make_report
-from app.services.documents import DocumentError, extract_chunks, file_hash, safe_filename, validate_file
-from app.services.shingles import covered_words, tokenize
-from app.services.serper import SerperClient, SerperError, web_query_from_text
-from app.services.web_sources import annotate_web_sources, save_internet_sources, web_rows
+from app.services.matching.checker import Checker, EngineUnavailable, filter_chunks, make_report
+from app.services.document.documents import DocumentError, extract_chunks, file_hash, safe_filename, validate_file
+from app.services.matching.shingles import covered_words, tokenize
+from app.services.web.serper import SerperClient, SerperError, web_query_from_text
+from app.services.web.web_sources import annotate_web_sources, save_internet_sources, web_rows
 
 logger = logging.getLogger(__name__)
 
@@ -282,7 +282,7 @@ def create_app(settings: Settings | None = None, database=None):
             except Exception:
                 state, detail = "unavailable", "Chưa kết nối được PostgreSQL hoặc chưa có bảng. Kiểm tra .env rồi chạy python -m app.db init."
         if settings.enable_ocr:
-            from app.services.ocr import ocr_status
+            from app.services.document.ocr import ocr_status
             ocr = {"enabled": True, **ocr_status(settings.tesseract_cmd, settings.ocr_language)}
         else:
             ocr = {"enabled": False, "available": False, "detail": "OCR đang tắt trong cấu hình.", "languages": []}
@@ -387,7 +387,7 @@ def create_app(settings: Settings | None = None, database=None):
 
     @app.get("/api/documents/{document_id}/preview")
     def preview(document_id: str, user: User = Depends(current_user)):
-        from app.services.preview import PreviewError, render_docx_html
+        from app.services.document.preview import PreviewError, render_docx_html
         with require_db().session() as session:
             document = session.get(Document, document_id)
             if not document or not can_view_document(session, user, document):
@@ -403,7 +403,7 @@ def create_app(settings: Settings | None = None, database=None):
             except PreviewError as error:
                 raise HTTPException(503, str(error)) from error
 
-    app.mount("/static", StaticFiles(directory=ROOT / "frontend"), name="static")
+    app.mount("/static", StaticFiles(directory=ROOT / "frontend" / "static"), name="static")
 
     @app.get("/", include_in_schema=False)
     def index():

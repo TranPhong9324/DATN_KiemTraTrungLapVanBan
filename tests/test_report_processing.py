@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from app.services.checker import cosine, exclusion_reason, features, filter_chunks, make_report, shares_phrase
+from app.services.matching.checker import cosine, exclusion_reason, features, filter_chunks, make_report, shares_phrase
 
 
 def chunk(identifier, ordinal, text, document_id=None, section="Nội dung"):
