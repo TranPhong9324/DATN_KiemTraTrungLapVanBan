@@ -31,17 +31,6 @@ Mở **http://127.0.0.1:8000**. Mặc định dùng so khớp từ vựng; ngữ
 
 Để chạy semantic matching, cài thêm `requirements.txt`. Không commit `.env`, mật khẩu PostgreSQL, khóa JWT hoặc API key.
 
-## Kế hoạch triển khai và tiếp tục với AI
-
-- [Kế hoạch triển khai G0–G9](KE_HOACH_TRIEN_KHAI.md): công việc, đầu ra, tiêu chí nghiệm thu và bước tiếp theo của từng giai đoạn.
-- [Tiến độ dành cho AI](TIEN_DO_AI.md): trạng thái hiện tại, nhiệm vụ kế tiếp và bằng chứng bàn giao giữa các phiên.
-- [Thiết kế lấy tài liệu nguồn bằng API miễn phí](docs/WEB_SOURCE_API.md): OpenAlex/Crossref/Unpaywall, Tavily tùy chọn, lọc Open Access và nhập vào kho `reference`.
-
-Kế hoạch mới đã đối chiếu mã nguồn ngày 19/09/2026. Phần hướng dẫn Module 1 bên dưới là tài liệu cũ; `vector_store.py` đã có trong dự án, còn việc kiểm chứng baseline được lên lịch ở G0.
-
-Đây là module đầu tiên của hệ thống kiểm tra & cảnh báo trùng lặp trong báo cáo đồ án,
-tương ứng với mốc **"Xây chức năng tách/trích PDF-DOCX, tiền xử lý/chia đoạn"** trong kế hoạch.
-
 ## Cấu trúc
 
 ```text
